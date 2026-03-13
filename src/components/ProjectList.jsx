@@ -248,7 +248,7 @@ const ProjectList = () => {
         projects, setProjects,
         updateProjectStatus: originalUpdateProjectStatus, 
         updateProjectField, toggleMasterUpdate, 
-        selectedIds, setSelectedIds,
+        selectedIds, setSelectedIds, toggleSelection,
         licenseCount, licenseRemaining, setLicenseCount,
         user
     } = useApp();
