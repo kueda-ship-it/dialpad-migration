@@ -661,29 +661,33 @@ const ProjectList = () => {
                     <div className="glass-panel-v13 px-8 pb-8 pt-4">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-separate border-spacing-0">
-                                <thead>
-                                    <tr>
-                                        <th className="px-8 py-10 w-16 text-center border-b border-white/[0.08]" style={{ verticalAlign: 'middle' }}>
+                                <thead className="relative">
+                                    <tr style={{ background: 'rgba(255,255,255,0.015)' }}>
+                                        <th className="px-8 py-14 w-16 text-center border-b border-white/[0.05]" style={{ verticalAlign: 'middle' }}>
                                             <Check size={13} className="mx-auto opacity-20" />
                                         </th>
-                                        <th className="px-8 py-10 w-[100px] border-b border-white/[0.08] cursor-pointer th-label nowrap-v12" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('id')}>
-                                            号機 <SortIcon columnKey="id" sortConfig={sortConfig} />
+                                        <th className="px-8 py-14 w-[100px] border-b border-white/[0.05] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('id')}>
+                                            <div className="flex items-center gap-2">号機 <SortIcon columnKey="id" sortConfig={sortConfig} /></div>
                                         </th>
-                                        <th className="px-8 py-10 border-b border-white/[0.08] cursor-pointer th-label nowrap-v12" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('name')}>
+                                        <th className="px-8 py-14 border-b border-white/[0.05] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('name')}>
                                             物件名 <SortIcon columnKey="name" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-10 w-[180px] border-b border-white/[0.08] cursor-pointer th-label nowrap-v12 text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('phone')}>
+                                        <th className="px-8 py-14 w-[180px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-10 w-[120px] border-b border-white/[0.08] cursor-pointer th-label nowrap-v12 text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-8 py-14 w-[120px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-10 w-[165px] border-b border-white/[0.08] cursor-pointer th-label nowrap-v12 text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('status')}>
+                                        <th className="px-8 py-14 w-[165px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('status')}>
                                             ステータス <SortIcon columnKey="status" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-10 w-[185px] border-b border-white/[0.08] cursor-pointer th-label nowrap-v12 text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('support_date')}>対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} /></th>
-                                        <th className="px-8 py-10 w-[116px] border-b border-white/[0.08] th-label nowrap-v12 text-center" style={{ verticalAlign: 'middle' }}>マスタ更新</th>
-                                        <th className="px-8 py-10 border-b border-white/[0.08]" style={{ verticalAlign: 'middle' }} />
+                                        <th className="px-8 py-14 w-[185px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('support_date')}>
+                                            対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
+                                        </th>
+                                        <th className="px-8 py-14 w-[116px] border-b border-white/[0.05] th-label-rich text-center" style={{ verticalAlign: 'middle' }}>
+                                            マスタ更新
+                                        </th>
+                                        <th className="px-8 py-14 border-b border-white/[0.05]" style={{ verticalAlign: 'middle' }} />
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/[0.01]">
