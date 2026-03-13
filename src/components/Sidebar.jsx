@@ -3,7 +3,7 @@ import { LayoutDashboard, ListTodo, MapPin, Calendar, Navigation, Settings as Se
 import { useApp } from '../context/AppContext';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
-    const { projects, user } = useApp();
+    const { projects, user, licenseCount, setLicenseCount, licenseRemaining } = useApp();
     const uncheckedCount = projects.filter(p => !p.master_update_done && p.status === '対応予定').length;
     const isAdminManagerOrEditor = ['Admin', 'Manager', 'Editor'].includes(user?.dm_role);
 
@@ -82,7 +82,31 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                     </span>
                 </div>
 
-                {/* Settings */}
+                {/* License Block */}
+                {isAdminManagerOrEditor && (
+                    <div className="px-3 mb-6">
+                        <div 
+                            onClick={() => {
+                                const newVal = window.prompt('新しいライセンス総数を入力してください', licenseCount);
+                                if (newVal !== null && !isNaN(parseInt(newVal))) {
+                                    setLicenseCount(parseInt(newVal));
+                                }
+                            }}
+                            className="glass-panel p-2 flex flex-col items-center gap-1 cursor-pointer hover:bg-white/5 transition-colors"
+                            style={{ borderRadius: '12px', border: '1px solid rgba(59,130,246,0.1)' }}
+                            title="クリックして直接編集"
+                        >
+                            <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">License</span>
+                            <div className="flex items-baseline gap-1">
+                                <span className="text-[14px] font-black text-blue-400 font-mono leading-none">{licenseCount}</span>
+                                {licenseRemaining !== null && (
+                                    <span className="text-[10px] font-bold text-white/30 truncate">/{licenseRemaining}</span>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+          {/* Settings */}
                 <div className="relative group w-full flex justify-center">
                     <button
                         onClick={() => setActiveTab('settings')}

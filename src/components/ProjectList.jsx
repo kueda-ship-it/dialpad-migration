@@ -244,17 +244,36 @@ const inputStyle = {
 
 /* ─── ProjectList ───────────────────────────────────────────────────────── */
 const ProjectList = () => {
-    const {
-        projects, selectedIds, toggleSelection,
-        updateProjectStatus, updateProjectField, updateProject,
-        toggleMasterUpdate, addProject, deleteProject, user,
-        licenseCount, setLicenseCount,
+    const { 
+        projects, setProjects, searchTerm, setSearchTerm, 
+        updateProjectStatus: originalUpdateProjectStatus, 
+        updateProjectField, toggleMasterUpdate, 
+        selectedIds, setSelectedIds,
+        licenseCount, licenseRemaining, updateLicenseCount,
+        user
     } = useApp();
+
+    const updateProjectStatus = useCallback((id, status) => {
+        const project = projects.find(p => p.id === id);
+        if (status === '対応済') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const hasDate = !!project?.support_date;
+            const pDate = hasDate ? new Date(project.support_date.replace(/-/g, '/')) : null;
+            if (pDate) pDate.setHours(0, 0, 0, 0);
+
+            if (!hasDate) {
+                if (!window.confirm('対応日が設定されていませんが、対応済に設定してよろしいですか？')) return;
+            } else if (pDate.getTime() < today.getTime()) {
+                if (!window.confirm('対応日が過去の日付ですが、対応済に設定してよろしいですか？')) return;
+            }
+        }
+        originalUpdateProjectStatus(id, status);
+    }, [originalUpdateProjectStatus, projects]);
 
     const isViewOnly = user?.dm_role === 'View';
     const isEditor = user?.dm_role === 'Editor';
     const canInlineEdit = !isViewOnly && !isEditor;
-    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('すべて');
     const [masterFilter, setMasterFilter] = useState('すべて');
     const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
@@ -326,7 +345,8 @@ const ProjectList = () => {
         const list = [...projects];
         list.sort((a, b) => {
             if (sortConfig.key === 'id') {
-                const nA = parseInt(a.id, 10) || 0, nB = parseInt(b.id, 10) || 0;
+                const nA = parseInt(a.id, 10) || 0;
+                const nB = parseInt(b.id, 10) || 0;
                 return sortConfig.direction === 'asc' ? nA - nB : nB - nA;
             }
             if (sortConfig.key === 'support_date') {
@@ -365,7 +385,7 @@ const ProjectList = () => {
 
     /* ─── License stats ── */
     const masterDoneCount = useMemo(() => projects.filter(p => p.master_update_done).length, [projects]);
-    const licenseRemaining = licenseCount > 0 ? licenseCount - masterDoneCount : null;
+    // const licenseRemaining = licenseCount > 0 ? licenseCount - masterDoneCount : null; // This is now from useApp
 
     /* ─── Pagination ── */
     const PAGE_SIZE = 50;
@@ -498,11 +518,42 @@ const ProjectList = () => {
                             )}
                         </div>
 
-                        {/* Result Count Badge */}
-                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.1] flex-shrink-0 animate-pulse-slow">
-                            <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">MATCH</span>
-                            <span className="text-[14px] font-black text-blue-400/90 font-mono">{filteredProjects.length}</span>
+                        {/* Result Count Badge - Richer Design */}
+                        <div className="flex items-center gap-4 px-6 py-2.5 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex-shrink-0 relative overflow-hidden group/match"
+                             style={{ boxShadow: '0 4px 20px -5px rgba(59,130,246,0.15), inset 0 0 15px rgba(255,255,255,0.01)' }}>
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover/match:opacity-100 transition-opacity duration-700" />
+                            <div className="flex flex-col items-start leading-none">
+                                <span className="text-[8px] font-black text-white/25 uppercase tracking-[0.25em] mb-1">MATCHED RESULTS</span>
+                                <div className="flex items-baseline gap-1.5">
+                                    <span className="text-[20px] font-black text-blue-400 font-mono tracking-tighter" style={{ textShadow: '0 0 15px rgba(96,165,250,0.3)' }}>{filteredProjects.length}</span>
+                                    <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Nodes</span>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Clear Selection Button */}
+                        <AnimatePresence>
+                            {selectedIds.length > 0 && (
+                                <motion.button
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -10 }}
+                                    onClick={() => setSelectedIds([])}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: '8px',
+                                        padding: '10px 18px', borderRadius: '14px',
+                                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                                        color: '#f87171', fontSize: '11px', fontWeight: 900,
+                                        letterSpacing: '0.1em', textTransform: 'uppercase',
+                                        boxShadow: '0 4px 15px rgba(239,68,68,0.1)'
+                                    }}
+                                    className="active-click group"
+                                >
+                                    <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
+                                    <span>Clear Selection ({selectedIds.length})</span>
+                                </motion.button>
+                            )}
+                        </AnimatePresence>
 
                         <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
@@ -530,13 +581,24 @@ const ProjectList = () => {
                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
                                     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; if(pressMinus.onMouseLeave) pressMinus.onMouseLeave(); }}
                                 ><Minus size={11} /></button>
-                                <span style={{
-                                    minWidth: '36px', textAlign: 'center', fontSize: '14px', fontWeight: 900,
-                                    fontFamily: 'Outfit, monospace', letterSpacing: '0.05em',
-                                    color: licenseRemaining !== null && licenseRemaining <= 10 ? '#f87171' : '#60a5fa',
-                                    lineHeight: 1,
-                                    userSelect: 'none',
-                                }}>{licenseCount || 0}</span>
+                                <span 
+                                    onClick={() => {
+                                        if (isViewOnly) return;
+                                        const newVal = window.prompt('新しいライセンス総数を入力してください', licenseCount);
+                                        if (newVal !== null && !isNaN(parseInt(newVal))) {
+                                            updateLicenseCount(parseInt(newVal));
+                                        }
+                                    }}
+                                    style={{
+                                        minWidth: '36px', textAlign: 'center', fontSize: '14px', fontWeight: 900,
+                                        fontFamily: 'Outfit, monospace', letterSpacing: '0.05em',
+                                        color: licenseRemaining !== null && licenseRemaining <= 10 ? '#f87171' : '#60a5fa',
+                                        lineHeight: 1,
+                                        userSelect: 'none',
+                                        cursor: isViewOnly ? 'default' : 'pointer'
+                                    }}
+                                    title={isViewOnly ? "" : "クリックして直接編集"}
+                                >{licenseCount || 0}</span>
                                 <button
                                     {...pressPlus}
                                     style={{
