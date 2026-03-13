@@ -586,7 +586,7 @@ const ProjectList = () => {
                                         if (isViewOnly) return;
                                         const newVal = window.prompt('新しいライセンス総数を入力してください', licenseCount);
                                         if (newVal !== null && !isNaN(parseInt(newVal))) {
-                                            updateLicenseCount(parseInt(newVal));
+                                            setLicenseCount(parseInt(newVal));
                                         }
                                     }}
                                     style={{

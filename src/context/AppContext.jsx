@@ -412,6 +412,12 @@ export const AppProvider = ({ children }) => {
         }, 500); // 500ms 停止後に送信
     };
 
+    const licenseRemaining = useMemo(() => {
+        if (!licenseCount || licenseCount <= 0) return null;
+        const masterDoneCount = projects.filter(p => p.master_update_done).length;
+        return licenseCount - masterDoneCount;
+    }, [projects, licenseCount]);
+
     return (
         <AppContext.Provider value={{
             projects,
@@ -437,6 +443,7 @@ export const AppProvider = ({ children }) => {
             setAuthLoading,
             licenseCount,
             setLicenseCount: updateLicenseCount,
+            licenseRemaining,
             activeUsers,
         }}>
             {children}
