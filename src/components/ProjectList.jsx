@@ -245,13 +245,15 @@ const inputStyle = {
 /* ─── ProjectList ───────────────────────────────────────────────────────── */
 const ProjectList = () => {
     const { 
-        projects, setProjects, searchTerm, setSearchTerm, 
+        projects, setProjects,
         updateProjectStatus: originalUpdateProjectStatus, 
         updateProjectField, toggleMasterUpdate, 
         selectedIds, setSelectedIds,
-        licenseCount, licenseRemaining, updateLicenseCount,
+        licenseCount, licenseRemaining, setLicenseCount,
         user
     } = useApp();
+
+    const [searchTerm, setSearchTerm] = useState('');
 
     const updateProjectStatus = useCallback((id, status) => {
         const project = projects.find(p => p.id === id);

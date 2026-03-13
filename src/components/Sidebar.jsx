@@ -98,8 +98,8 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
                         >
                             <span className="text-[8px] font-black text-white/20 uppercase tracking-widest">License</span>
                             <div className="flex items-baseline gap-1">
-                                <span className="text-[14px] font-black text-blue-400 font-mono leading-none">{licenseCount}</span>
-                                {licenseRemaining !== null && (
+                                <span className="text-[14px] font-black text-blue-400 font-mono leading-none">{Number(licenseCount) || 0}</span>
+                                {licenseRemaining !== null && !isNaN(licenseRemaining) && (
                                     <span className="text-[10px] font-bold text-white/30 truncate">/{licenseRemaining}</span>
                                 )}
                             </div>
