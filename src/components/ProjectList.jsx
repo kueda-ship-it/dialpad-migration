@@ -662,32 +662,36 @@ const ProjectList = () => {
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead className="relative">
-                                    <tr style={{ background: 'rgba(255,255,255,0.015)' }}>
-                                        <th className="px-8 py-14 w-16 text-center border-b border-white/[0.05]" style={{ verticalAlign: 'middle' }}>
-                                            <Check size={13} className="mx-auto opacity-20" />
+                                    <tr style={{ 
+                                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                                        backdropFilter: 'blur(12px)',
+                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
+                                    }}>
+                                        <th className="px-8 py-9 w-16 text-center border-b border-white/[0.08]" style={{ verticalAlign: 'middle' }}>
+                                            <Check size={16} className="mx-auto text-white opacity-70" style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.2))' }} />
                                         </th>
-                                        <th className="px-8 py-14 w-[100px] border-b border-white/[0.05] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('id')}>
+                                        <th className="px-8 py-9 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('id')}>
                                             <div className="flex items-center gap-2">号機 <SortIcon columnKey="id" sortConfig={sortConfig} /></div>
                                         </th>
-                                        <th className="px-8 py-14 border-b border-white/[0.05] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('name')}>
+                                        <th className="px-8 py-9 border-b border-white/[0.08] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('name')}>
                                             物件名 <SortIcon columnKey="name" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-14 w-[180px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('phone')}>
+                                        <th className="px-8 py-9 w-[180px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-14 w-[120px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-8 py-9 w-[120px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-14 w-[165px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('status')}>
+                                        <th className="px-8 py-9 w-[165px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('status')}>
                                             ステータス <SortIcon columnKey="status" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-14 w-[185px] border-b border-white/[0.05] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('support_date')}>
+                                        <th className="px-8 py-9 w-[185px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('support_date')}>
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-14 w-[116px] border-b border-white/[0.05] th-label-rich text-center" style={{ verticalAlign: 'middle' }}>
+                                        <th className="px-8 py-9 w-[116px] border-b border-white/[0.08] th-label-rich text-center" style={{ verticalAlign: 'middle' }}>
                                             マスタ更新
                                         </th>
-                                        <th className="px-8 py-14 border-b border-white/[0.05]" style={{ verticalAlign: 'middle' }} />
+                                        <th className="px-8 py-9 border-b border-white/[0.08]" style={{ verticalAlign: 'middle' }} />
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/[0.01]">
