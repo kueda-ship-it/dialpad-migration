@@ -539,8 +539,6 @@ const ProjectList = () => {
                             </div>
                         </div>
 
-                        </div>
-
                         <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
 
@@ -622,31 +620,6 @@ const ProjectList = () => {
                             CSV
                         </button>
                         <div className="ml-auto flex items-center gap-4">
-                            <AnimatePresence mode="wait">
-                                {selectedIds.length > 0 && (
-                                    <motion.button
-                                        key="clear-btn"
-                                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
-                                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
-                                        onClick={() => setSelectedIds([])}
-                                        className="active-click group flex items-center gap-2"
-                                        style={{
-                                            padding: '8px 16px', borderRadius: '12px',
-                                            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
-                                            color: '#f87171', fontSize: '10px', fontWeight: 900,
-                                            letterSpacing: '0.12em', textTransform: 'uppercase',
-                                            cursor: 'pointer', transition: 'all 0.2s',
-                                        }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.15)'; }}
-                                    >
-                                        <X size={12} className="group-hover:rotate-90 transition-transform duration-300" />
-                                        <span>Clear ({selectedIds.length})</span>
-                                    </motion.button>
-                                )}
-                            </AnimatePresence>
-                            
                             <button
                                 className="btn-add-rich-v10 group flex-shrink-0"
                                 onClick={() => !isViewOnly && setIsAddModalOpen(true)}
@@ -723,6 +696,31 @@ const ProjectList = () => {
                             </table>
                         </div>
                     </div>
+                </div>
+                <div className="px-8 mt-4 flex justify-end">
+                    <AnimatePresence>
+                        {selectedIds.length > 0 && (
+                            <motion.button
+                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                                onClick={() => setSelectedIds([])}
+                                className="active-click group flex items-center gap-2"
+                                style={{
+                                    padding: '10px 20px', borderRadius: '16px',
+                                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                                    color: '#f87171', fontSize: '11px', fontWeight: 900,
+                                    letterSpacing: '0.15em', textTransform: 'uppercase',
+                                    cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: '0 4px 20px rgba(239,68,68,0.15)',
+                                    backdropFilter: 'blur(10px)'
+                                }}
+                            >
+                                <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
+                                <span>Clear Selection ({selectedIds.length})</span>
+                            </motion.button>
+                        )}
+                    </AnimatePresence>
                 </div>
             </main>
             {/* ─── Pagination ──────────────────────────────────────── */}
