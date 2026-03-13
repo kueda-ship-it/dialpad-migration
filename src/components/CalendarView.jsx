@@ -188,6 +188,29 @@ const CalendarView = () => {
     const sp = selectedProject;
     const spStyle = sp ? (STATUS_STYLE[sp.status] || STATUS_STYLE['未対応']) : null;
 
+    // 月別の集計
+    const monthlyStats = (() => {
+        const year = currentDate.getFullYear();
+        const month = currentDate.getMonth();
+        const monthProjects = projects.filter(p => {
+            if (!p.support_date) return false;
+            const pd = new Date(p.support_date.replace(/-/g, '/'));
+            return pd.getFullYear() === year && pd.getMonth() === month;
+        });
+
+        const stats = {
+            total: monthProjects.length,
+            '対応済': 0,
+            '対応予定': 0,
+            '未対応': 0,
+            'リスケ': 0
+        };
+        monthProjects.forEach(p => {
+            if (stats[p.status] !== undefined) stats[p.status]++;
+        });
+        return stats;
+    })();
+
     return (
         <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '40px' }}>
             {/* ─── Calendar Fixed Header (Sticky) ────────────────────────── */}
@@ -203,14 +226,36 @@ const CalendarView = () => {
                 boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
             }}>
                 <div className="flex justify-between items-center w-full">
-                    {/* Legend */}
-                    <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-                        {Object.entries(STATUS_STYLE).map(([label, s]) => (
-                            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <div style={{ width: 8, height: 8, borderRadius: '50%', background: s.border, boxShadow: `0 0 6px ${s.border}` }} />
-                                <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>{label}</span>
-                            </div>
-                        ))}
+                    {/* Stats Summary */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '8px', 
+                            background: 'rgba(255,255,255,0.03)', 
+                            border: '1px solid rgba(255,255,255,0.06)', 
+                            borderRadius: '12px', 
+                            padding: '6px 14px' 
+                        }}>
+                            <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>TOTAL</span>
+                            <span style={{ fontSize: '15px', fontWeight: 900, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>{monthlyStats.total}</span>
+                        </div>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            {Object.entries(STATUS_STYLE).map(([label, s]) => (
+                                <div key={label} style={{ 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '6px', 
+                                    background: 'rgba(255,255,255,0.02)', 
+                                    border: `1px solid ${s.border}22`, 
+                                    borderRadius: '10px', 
+                                    padding: '4px 10px' 
+                                }}>
+                                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: s.border, boxShadow: `0 0 5px ${s.border}` }} />
+                                    <span style={{ fontSize: '13px', fontWeight: 800, color: s.text, fontFamily: 'Outfit, sans-serif' }}>{monthlyStats[label] || 0}</span>
+                                </div>
+                            ))}
+                        </div>
                     </div>
 
                     {/* Controls */}
