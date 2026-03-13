@@ -66,11 +66,6 @@ const RouteFinder = () => {
 
     return (
         <div className="w-full space-y-10">
-            {/* ─── Header ─────────────────────────────────────────────── */}
-            <header className="pt-2">
-                <h1 className="text-6xl font-black title-gradient-v10 tracking-tighter">Route Planner</h1>
-                <p className="management-subtitle-v13 mt-3">Smart Nearest-Neighbor Route Optimization</p>
-            </header>
 
             {/* ─── Empty State ─────────────────────────────────────────── */}
             {selectedProjects.length === 0 ? (

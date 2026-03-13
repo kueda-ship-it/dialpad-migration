@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { AnimatePresence, motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
@@ -16,6 +16,122 @@ const STATUS_COLORS = {
     '未対応': { bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.3)', text: '#94a3b8', dot: 'rgba(100,116,139,0.8)' },
     'リスケ': { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.32)', text: '#f87171', dot: 'rgba(239,68,68,0.9)' },
 };
+
+/* ─── ProjectRow (Memoized) ──────────────────────────────────────────────── */
+const ProjectRow = React.memo(({
+    project, isSelected, toggleSelection,
+    updateProjectStatus, handleSupportDateChange, toggleMasterUpdate,
+    openEditModal, openDetailModal,
+    copyToClipboard, copiedId, isViewOnly, canInlineEdit
+}) => {
+    const rowClass =
+        project.status === '対応済' ? 'row-completed' :
+            project.status === '対応予定' ? 'row-planned' : '';
+
+    const formatMaintenanceMonth = (month) => {
+        if (!month) return '---';
+        return month.toString().split(',').map(m => `${m.trim()}月`).join(', ');
+    };
+
+    return (
+        <tr className={`tr-hover-v13 ${rowClass}`}>
+            <td className="px-8 py-5 text-center border-b border-white/[0.025]">
+                <input type="checkbox" className="checkbox-v5" checked={isSelected} onChange={() => toggleSelection(project.id)} />
+            </td>
+            <td className="px-8 py-5 border-b border-white/[0.025]">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span className="node-id-plain">{project.id}</span>
+                    <button
+                        onClick={e => { e.stopPropagation(); copyToClipboard(project.id, 'id-' + project.id); }}
+                        title="号機IDをコピー"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.4, transition: 'opacity 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                        onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                    >
+                        {copiedId === 'id-' + project.id
+                            ? <Check size={11} style={{ color: '#10b981' }} />
+                            : <Copy size={11} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                        }
+                    </button>
+                </div>
+            </td>
+            <td className="px-8 py-5 border-b border-white/[0.025]">
+                <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
+                        <button
+                            onClick={e => { e.stopPropagation(); copyToClipboard(project.name, 'name-' + project.id); }}
+                            title="物件名をコピー"
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.4, transition: 'opacity 0.15s' }}
+                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
+                            onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
+                        >
+                            {copiedId === 'name-' + project.id
+                                ? <Check size={11} style={{ color: '#10b981' }} />
+                                : <Copy size={11} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                            }
+                        </button>
+                    </div>
+                    {project.address && (
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', fontWeight: 500 }}>{project.address}</div>
+                    )}
+                </div>
+            </td>
+            <td className="px-8 py-5 border-b border-white/[0.025] nowrap-v12 text-center">
+                <span style={{ fontSize: '11px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.7)' }}>{project.phone || '---'}</span>
+            </td>
+            <td className="px-8 py-5 border-b border-white/[0.025] nowrap-v12 text-center">
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
+            </td>
+            <td className="px-8 py-5 border-b border-white/[0.025] text-center">
+                <GlassDropdown value={project.status} onChange={(val) => updateProjectStatus(project.id, val)} options={['未対応', '対応予定', '対応済', 'リスケ']} disabled={!canInlineEdit} useStatusColor />
+            </td>
+            <td className="p-5 border-b border-white/[0.02] text-center">
+                <div className="inline-flex items-center rounded-xl px-4 py-2.5 transition-all duration-300 group/date relative min-w-[145px] justify-center" style={{ background: STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)', border: `1px solid ${STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)'}` }}>
+                    <Calendar size={14} style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)', opacity: 0.6 }} className="mr-3" />
+                    {canInlineEdit ? (
+                        <input type="date" className="bg-transparent border-none text-[13px] font-black outline-none cursor-pointer [color-scheme:dark] date-input-v17" style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }} value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} onChange={(e) => handleSupportDateChange(project, e.target.value)} />
+                    ) : (
+                        <span className="text-[13px] font-black font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.3)' }}>{project.support_date || '----/--/--'}</span>
+                    )}
+                </div>
+            </td>
+            <td className="px-5 py-5 border-b border-white/[0.025]">
+                <div className="flex justify-center">
+                    <button
+                        onClick={(e) => { e.stopPropagation(); !isViewOnly && toggleMasterUpdate(project.id); }}
+                        className={`btn-square-v9 flex items-center justify-center transition-all ${project.master_update_done
+                            ? 'border-[#a855f7]/80 bg-[#a855f7]/05 text-[#a855f7] scale-105'
+                            : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
+                        style={{
+                            width: '42px', height: '42px', borderRadius: '12px',
+                            filter: project.master_update_done ? 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.6))' : 'none',
+                            boxShadow: project.master_update_done ? 'inset 0 0 10px rgba(168, 85, 247, 0.3)' : 'none'
+                        }}
+                        disabled={isViewOnly}
+                    >
+                        <FileCheck
+                            size={17}
+                            style={{
+                                color: project.master_update_done ? '#c084fc' : undefined,
+                                filter: project.master_update_done
+                                    ? 'drop-shadow(0 0 2px rgba(192, 132, 252, 0.95)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.4))'
+                                    : 'none'
+                            }}
+                        />
+                    </button>
+                </div>
+            </td>
+            <td className="px-5 py-5 border-b border-white/[0.025]">
+                <div className="flex items-center justify-end gap-2">
+                    <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openEditModal(project); }} disabled={isViewOnly}><Edit size={14} /></button>
+                    <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openDetailModal(project); }}><Info size={14} /></button>
+                </div>
+            </td>
+        </tr>
+    );
+});
+
 
 /* ─── GlassDropdown ─────────────────────────────────────────────────────── */
 const GlassDropdown = ({ value, onChange, options, labelPrefix = '', disabled = false, useStatusColor = false }) => {
@@ -134,6 +250,42 @@ const ProjectList = () => {
     const [statusFilter, setStatusFilter] = useState('すべて');
     const [masterFilter, setMasterFilter] = useState('すべて');
     const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+
+    /* ─── Long Press Hook ── */
+    const useLongPress = (callback, ms = 100) => {
+        const timerRef = useRef(null);
+        const intervalRef = useRef(null);
+
+        const stop = useCallback(() => {
+            if (timerRef.current) clearTimeout(timerRef.current);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+        }, []);
+
+        const start = useCallback(() => {
+            callback(); // 初期クリック分
+            timerRef.current = setTimeout(() => {
+                intervalRef.current = setInterval(() => {
+                    callback();
+                }, ms);
+            }, 500); // 500ms長押しで連続増減開始
+        }, [callback, ms]);
+
+        useEffect(() => {
+            return stop;
+        }, [stop]);
+
+        return {
+            onMouseDown: start,
+            onMouseUp: stop,
+            onMouseLeave: stop,
+            onTouchStart: start,
+            onTouchEnd: stop,
+        };
+    };
+
+    const pressMinus = useLongPress(() => setLicenseCount(c => Math.max(0, c - 1)));
+    const pressPlus = useLongPress(() => setLicenseCount(c => c + 1));
+
 
     /* ─── Modals ── */
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -310,22 +462,8 @@ const ProjectList = () => {
         <div className="w-full relative pb-20">
             <div className="mesh-bg-v13" />
 
-            {/* ─── Sticky Header + Filter ──────────────────────────────── */}
-            <div style={{
-                position: 'sticky', top: 0, zIndex: 40,
-                background: 'rgba(3,7,18,0.96)',
-                backdropFilter: 'blur(32px)',
-                paddingTop: '32px', paddingBottom: '20px',
-                borderBottom: '1px solid rgba(255,255,255,0.04)',
-                marginBottom: '4px',
-            }}>
-                <header className="mb-14 relative z-10">
-                    <motion.div initial={{ opacity: 0, x: -24 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6 }}>
-                        <h1 className="text-6xl font-black title-gradient-v10 tracking-tighter">Projects</h1>
-                        <p className="management-subtitle-v13 mt-3">Advanced Migration Control Interface</p>
-                    </motion.div>
-                </header>
-
+            {/* ─── Filter Panel (Sticky beneath Global Header) ────────── */}
+            <div className="filter-panel-sticky">
                 <div className="glass-panel p-5">
                     <div className="flex flex-wrap items-center gap-4">
                         {/* 検索 */}
@@ -346,6 +484,12 @@ const ProjectList = () => {
                             )}
                         </div>
 
+                        {/* Result Count Badge */}
+                        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.1] flex-shrink-0 animate-pulse-slow">
+                            <span className="text-[9px] font-black text-white/30 uppercase tracking-[0.2em]">MATCH</span>
+                            <span className="text-[14px] font-black text-blue-400/90 font-mono">{filteredProjects.length}</span>
+                        </div>
+
                         <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
 
@@ -362,30 +506,33 @@ const ProjectList = () => {
                                 <ShieldCheck size={13} style={{ color: licenseRemaining !== null && licenseRemaining <= 10 ? '#f87171' : '#60a5fa', flexShrink: 0 }} />
                                 <span style={{ fontSize: '10px', fontWeight: 800, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.1em', textTransform: 'uppercase', whiteSpace: 'nowrap', marginLeft: '2px' }}>LICENSE</span>
                                 <button
-                                    onClick={() => setLicenseCount(c => Math.max(0, c - 1))}
+                                    {...pressMinus}
                                     style={{
                                         width: '24px', height: '24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(255,255,255,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         color: 'rgba(255,255,255,0.5)', transition: 'all 0.15s', flexShrink: 0,
+                                        userSelect: 'none', 
                                     }}
                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; if(pressMinus.onMouseLeave) pressMinus.onMouseLeave(); }}
                                 ><Minus size={11} /></button>
                                 <span style={{
                                     minWidth: '36px', textAlign: 'center', fontSize: '14px', fontWeight: 900,
                                     fontFamily: 'Outfit, monospace', letterSpacing: '0.05em',
                                     color: licenseRemaining !== null && licenseRemaining <= 10 ? '#f87171' : '#60a5fa',
                                     lineHeight: 1,
+                                    userSelect: 'none',
                                 }}>{licenseCount || 0}</span>
                                 <button
-                                    onClick={() => setLicenseCount(c => c + 1)}
+                                    {...pressPlus}
                                     style={{
                                         width: '24px', height: '24px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)',
                                         background: 'rgba(255,255,255,0.05)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         color: 'rgba(255,255,255,0.5)', transition: 'all 0.15s', flexShrink: 0,
+                                        userSelect: 'none',
                                     }}
                                     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; e.currentTarget.style.color = '#fff'; }}
-                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+                                    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; if(pressPlus.onMouseLeave) pressPlus.onMouseLeave(); }}
                                 ><Plus size={11} /></button>
                                 {licenseCount > 0 && licenseRemaining !== null && (
                                     <span style={{ fontSize: '10px', fontWeight: 700, color: licenseRemaining <= 10 ? '#f87171' : 'rgba(255,255,255,0.35)', whiteSpace: 'nowrap', borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '8px', marginLeft: '2px' }}>
@@ -425,7 +572,7 @@ const ProjectList = () => {
             </div>
 
             {/* ─── Table ───────────────────────────────────────────────── */}
-            <main className="relative z-10 px-8">
+            <main className="relative z-10 px-8 mt-8">
                 <div className="overflow-hidden rounded-2xl border border-white/[0.04]">
                     <div className="glass-panel-v13 px-8 pb-8 pt-4">
                         <div className="overflow-x-auto">
@@ -456,108 +603,23 @@ const ProjectList = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/[0.01]">
-                                    {pagedProjects.map((project) => {
-                                        const rowClass =
-                                            project.status === '対応済' ? 'row-completed' :
-                                                project.status === '対応予定' ? 'row-planned' : '';
-                                        return (
-                                            <tr key={project.id} className={`tr-hover-v13 ${rowClass}`}>
-                                                <td className="px-8 py-5 text-center border-b border-white/[0.025]">
-                                                    <input type="checkbox" className="checkbox-v5" checked={selectedIds.includes(project.id)} onChange={() => toggleSelection(project.id)} />
-                                                </td>
-                                                <td className="px-8 py-5 border-b border-white/[0.025]">
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                        <span className="node-id-plain">{project.id}</span>
-                                                        <button
-                                                            onClick={e => { e.stopPropagation(); copyToClipboard(project.id, 'id-' + project.id); }}
-                                                            title="号機IDをコピー"
-                                                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.4, transition: 'opacity 0.15s' }}
-                                                            onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                                                            onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
-                                                        >
-                                                            {copiedId === 'id-' + project.id
-                                                                ? <Check size={11} style={{ color: '#10b981' }} />
-                                                                : <Copy size={11} style={{ color: 'rgba(255,255,255,0.6)' }} />
-                                                            }
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 border-b border-white/[0.025]">
-                                                    <div>
-                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
-                                                            <button
-                                                                onClick={e => { e.stopPropagation(); copyToClipboard(project.name, 'name-' + project.id); }}
-                                                                title="物件名をコピー"
-                                                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', opacity: 0.4, transition: 'opacity 0.15s' }}
-                                                                onMouseEnter={e => e.currentTarget.style.opacity = '1'}
-                                                                onMouseLeave={e => e.currentTarget.style.opacity = '0.4'}
-                                                            >
-                                                                {copiedId === 'name-' + project.id
-                                                                    ? <Check size={11} style={{ color: '#10b981' }} />
-                                                                    : <Copy size={11} style={{ color: 'rgba(255,255,255,0.6)' }} />
-                                                                }
-                                                            </button>
-                                                        </div>
-                                                        {project.address && (
-                                                            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', fontWeight: 500 }}>{project.address}</div>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-5 border-b border-white/[0.025] nowrap-v12 text-center">
-                                                    <span style={{ fontSize: '11px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.7)' }}>{project.phone || '---'}</span>
-                                                </td>
-                                                <td className="px-8 py-5 border-b border-white/[0.025] nowrap-v12 text-center">
-                                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
-                                                </td>
-                                                <td className="px-8 py-5 border-b border-white/[0.025] text-center">
-                                                    <GlassDropdown value={project.status} onChange={(val) => updateProjectStatus(project.id, val)} options={['未対応', '対応予定', '対応済', 'リスケ']} disabled={!canInlineEdit} useStatusColor />
-                                                </td>
-                                                <td className="p-5 border-b border-white/[0.02] text-center">
-                                                    <div className="inline-flex items-center rounded-xl px-4 py-2.5 transition-all duration-300 group/date relative min-w-[145px] justify-center" style={{ background: STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)', border: `1px solid ${STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)'}` }}>
-                                                        <Calendar size={14} style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)', opacity: 0.6 }} className="mr-3" />
-                                                        {canInlineEdit ? (
-                                                            <input type="date" className="bg-transparent border-none text-[13px] font-black outline-none cursor-pointer [color-scheme:dark] date-input-v17" style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }} value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} onChange={(e) => handleSupportDateChange(project, e.target.value)} />
-                                                        ) : (
-                                                            <span className="text-[13px] font-black font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.3)' }}>{project.support_date || '----/--/--'}</span>
-                                                        )}
-                                                    </div>
-                                                </td>
-                                                <td className="px-5 py-5 border-b border-white/[0.025]">
-                                                    <div className="flex justify-center">
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); !isViewOnly && toggleMasterUpdate(project.id); }}
-                                                            className={`btn-square-v9 flex items-center justify-center transition-all ${project.master_update_done
-                                                                ? 'border-[#a855f7]/80 bg-[#a855f7]/05 text-[#a855f7] scale-105'
-                                                                : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
-                                                            style={{
-                                                                width: '42px', height: '42px', borderRadius: '12px',
-                                                                filter: project.master_update_done ? 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.6))' : 'none',
-                                                                boxShadow: project.master_update_done ? 'inset 0 0 10px rgba(168, 85, 247, 0.3)' : 'none'
-                                                            }}
-                                                            disabled={isViewOnly}
-                                                        >
-                                                            <FileCheck
-                                                                size={17}
-                                                                style={{
-                                                                    color: project.master_update_done ? '#c084fc' : undefined,
-                                                                    filter: project.master_update_done
-                                                                        ? 'drop-shadow(0 0 2px rgba(192, 132, 252, 0.95)) drop-shadow(0 0 6px rgba(168, 85, 247, 0.4))'
-                                                                        : 'none'
-                                                                }}
-                                                            />
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                                <td className="px-5 py-5 border-b border-white/[0.025]">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openEditModal(project); }} disabled={isViewOnly}><Edit size={14} /></button>
-                                                        <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openDetailModal(project); }}><Info size={14} /></button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
+                                    {pagedProjects.map((project) => (
+                                        <ProjectRow
+                                            key={project.id}
+                                            project={project}
+                                            isSelected={selectedIds.includes(project.id)}
+                                            toggleSelection={toggleSelection}
+                                            updateProjectStatus={updateProjectStatus}
+                                            handleSupportDateChange={handleSupportDateChange}
+                                            toggleMasterUpdate={toggleMasterUpdate}
+                                            openEditModal={openEditModal}
+                                            openDetailModal={openDetailModal}
+                                            copyToClipboard={copyToClipboard}
+                                            copiedId={copiedId}
+                                            isViewOnly={isViewOnly}
+                                            canInlineEdit={canInlineEdit}
+                                        />
+                                    ))}
                                 </tbody>
                             </table>
                         </div>

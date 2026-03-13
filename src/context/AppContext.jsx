@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { MOCK_PROJECTS } from '../utils/mockData';
 
@@ -9,9 +9,186 @@ export const AppProvider = ({ children }) => {
     const [authLoading, setAuthLoading] = useState(true);
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [licenseCount, setLicenseCount] = useState(() => {
-        try { return parseInt(localStorage.getItem('dm_license_count') || '0', 10); } catch { return 0; }
-    });
+    const [licenseCount, setLicenseCount] = useState(null);
+    const [activeUsers, setActiveUsers] = useState([]);
+    const licenseTimeoutRef = useRef(null);
+
+    // AVATAR_CACHE_KEY をコンテキスト全体で共有
+    const AVATAR_CACHE_KEY = 'dm_avatar_cache';
+
+    // ユーザー情報のエンリッチメントとキャッシュ処理
+    const enrichUser = useCallback(async (sessionUser) => {
+        if (!sessionUser) {
+            setUser(null);
+            return;
+        }
+
+        const isUeda = sessionUser.user_metadata?.full_name?.includes('上田') || 
+                        sessionUser.email?.includes('ueda') || 
+                        sessionUser.email === 'k_ueda@fts.co.jp';
+        
+        // 1. キャッシュから即時取得
+        let cachedData = { avatar: null, name: null, role: null };
+        try {
+            const cache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY) || '{}');
+            if (cache[sessionUser.id]) cachedData = cache[sessionUser.id];
+        } catch { /* ignore */ }
+
+        const initialUser = {
+            ...sessionUser,
+            full_name: cachedData.name || sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown User',
+            avatar_url: cachedData.avatar || sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture || null,
+            dm_role: cachedData.role || (isUeda ? 'Admin' : (sessionUser.user_metadata?.dm_role || 'Manager'))
+        };
+
+        setUser(initialUser);
+
+        // 2. 非同期でプロファイル情報を取得して更新
+        const fetchRemoteProfile = async () => {
+            try {
+                // DBのテーブル定義に合わせて full_name -> display_name に修正
+                const { data } = await supabase.from('profiles').select('avatar_url, display_name, dm_role').eq('id', sessionUser.id).single();
+                if (data) {
+                    const cache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY) || '{}');
+                    cache[sessionUser.id] = {
+                        avatar: data.avatar_url,
+                        role: data.dm_role,
+                        name: data.display_name,
+                    };
+                    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(cache));
+
+                    setUser(prev => {
+                        if (!prev) return prev;
+                        // DBの値を優先的に適用
+                        const next = { ...prev };
+                        if (data.avatar_url) next.avatar_url = data.avatar_url;
+                        if (data.dm_role)   next.dm_role = data.dm_role;
+                        if (data.display_name) next.full_name = data.display_name;
+                        return next;
+                    });
+                }
+            } catch (e) {
+                console.error('Profile fetch error:', e);
+            }
+        };
+
+        fetchRemoteProfile();
+    }, []);
+
+    // Auth session handling
+    useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            enrichUser(session?.user);
+            setAuthLoading(false);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            enrichUser(session?.user);
+            setAuthLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
+    }, [enrichUser]);
+
+    // Presence & Real-time Active Users
+    useEffect(() => {
+        if (!user) return;
+
+        const channel = supabase.channel('online-users', {
+            config: {
+                presence: {
+                    key: user.id,
+                },
+            },
+        });
+
+        channel
+            .on('presence', { event: 'sync' }, () => {
+                const newState = channel.presenceState();
+                const users = [];
+                for (const id in newState) {
+                    // 自分自身を除外
+                    if (id === user.id) continue;
+                    
+                    const presence = newState[id][0];
+                    if (presence) users.push(presence);
+                }
+                setActiveUsers(users);
+            })
+            .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+                console.log('Join:', key, newPresences);
+            })
+            .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+                console.log('Leave:', key, leftPresences);
+            })
+            .subscribe(async (status) => {
+                if (status === 'SUBSCRIBED') {
+                    await channel.track({
+                        id: user.id,
+                        full_name: user.full_name || 'Unknown',
+                        avatar_url: user.avatar_url,
+                        email: user.email,
+                        online_at: new Date().toISOString(),
+                    });
+                }
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [user]);
+
+    // Fetch license count from Supabase
+    const fetchLicenseCount = useCallback(async () => {
+        try {
+            const { data, error } = await supabase
+                .from('system_settings')
+                .select('value')
+                .eq('key', 'license_pool')
+                .single();
+            if (error) throw error;
+            if (data?.value?.total !== undefined) {
+                setLicenseCount(data.value.total);
+            } else {
+                // Fallback to local
+                const localStr = localStorage.getItem('dm_license_count');
+                const local = localStr ? parseInt(localStr, 10) : 250; // Default to 250 if nothing found
+                setLicenseCount(local);
+            }
+        } catch (err) {
+            console.error('Error fetching license count:', err);
+            const localStr = localStorage.getItem('dm_license_count');
+            const local = localStr ? parseInt(localStr, 10) : 250;
+            setLicenseCount(local);
+        }
+    }, []);
+
+    // Real-time subscription for license count
+    useEffect(() => {
+        const channel = supabase
+            .channel('system_settings_changes')
+            .on('postgres_changes', { 
+                event: 'UPDATE', 
+                schema: 'public', 
+                table: 'system_settings',
+                filter: 'key=eq.license_pool'
+            }, payload => {
+                if (payload.new?.value?.total !== undefined) {
+                    setLicenseCount(payload.new.value.total);
+                }
+            })
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!authLoading) {
+            fetchLicenseCount();
+        }
+    }, [fetchLicenseCount, authLoading]);
 
     // Fetch projects from Supabase
     const fetchProjects = useCallback(async () => {
@@ -64,8 +241,10 @@ export const AppProvider = ({ children }) => {
     }, []);
 
     useEffect(() => {
-        fetchProjects();
-    }, [fetchProjects]);
+        if (!authLoading) {
+            fetchProjects();
+        }
+    }, [fetchProjects, authLoading]);
     const [selectedIds, setSelectedIds] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [notificationSettings, setNotificationSettings] = useState({
@@ -179,16 +358,31 @@ export const AppProvider = ({ children }) => {
 
     const updateProjectField = async (id, field, value) => {
         setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-        const dbField = field === 'phone' ? 'phone_number' : field;
-        await supabase.from('projects').update({ [dbField]: value }).eq('unit_id', id);
+        
+        let dbValue = value;
+        let dbField = field;
+        
+        if (field === 'support_date') {
+            // 日本語UIでは / 区切りだが DB は - 区切り。空文字は明確に null にする。
+            dbValue = value ? value.replace(/\//g, '-') : null;
+        } else if (field === 'phone') {
+            dbField = 'phone_number';
+        }
+
+        const { error } = await supabase.from('projects').update({ [dbField]: dbValue }).eq('unit_id', id);
+        if (error) console.error(`Error updating project field ${field}:`, error);
     };
 
     const toggleMasterUpdate = async (id) => {
         const project = projects.find(p => p.id === id);
         if (!project) return;
         const newValue = !project.master_update_done;
+        // Optimistic UI update
         setProjects(prev => prev.map(p => p.id === id ? { ...p, master_update_done: newValue } : p));
-        await supabase.from('projects').update({ master_update_done: newValue }).eq('unit_id', id);
+        // Background DB sync
+        supabase.from('projects').update({ master_update_done: newValue }).eq('unit_id', id).then(({ error }) => {
+            if (error) console.error('Error updating master status:', error);
+        });
     };
 
     const deleteProject = async (id) => {
@@ -204,10 +398,19 @@ export const AppProvider = ({ children }) => {
 
     const clearSelection = () => setSelectedIds([]);
 
-    // persist licenseCount
-    useEffect(() => {
-        localStorage.setItem('dm_license_count', licenseCount.toString());
-    }, [licenseCount]);
+    // persist licenseCount to Supabase (debounced)
+    const updateLicenseCount = (newCount) => {
+        setLicenseCount(newCount);
+        localStorage.setItem('dm_license_count', newCount.toString());
+
+        if (licenseTimeoutRef.current) clearTimeout(licenseTimeoutRef.current);
+        licenseTimeoutRef.current = setTimeout(async () => {
+            await supabase
+                .from('system_settings')
+                .update({ value: { total: newCount } })
+                .eq('key', 'license_pool');
+        }, 500); // 500ms 停止後に送信
+    };
 
     return (
         <AppContext.Provider value={{
@@ -233,7 +436,8 @@ export const AppProvider = ({ children }) => {
             authLoading,
             setAuthLoading,
             licenseCount,
-            setLicenseCount,
+            setLicenseCount: updateLicenseCount,
+            activeUsers,
         }}>
             {children}
         </AppContext.Provider>

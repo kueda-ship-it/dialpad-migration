@@ -218,6 +218,17 @@ const Settings = () => {
                 .eq('id', user.id);
 
             if (!updateError) {
+                // Update local cache as well
+                const AVATAR_CACHE_KEY = 'dm_avatar_cache';
+                try {
+                    const cache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY) || '{}');
+                    cache[user.id] = {
+                        ...(cache[user.id] || {}),
+                        avatar: urlData.publicUrl
+                    };
+                    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(cache));
+                } catch { /* ignore */ }
+
                 setUser(prev => ({ ...prev, avatar_url: urlData.publicUrl }));
                 alert('アバターを更新しました！');
             }

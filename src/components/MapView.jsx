@@ -175,11 +175,6 @@ const MapView = () => {
 
     return (
         <div className="w-full space-y-8">
-            {/* ─── Header ─────────────────────────────────────────────── */}
-            <header className="mb-2">
-                <h1 className="text-6xl font-black title-gradient-v10 tracking-tighter">Property Map</h1>
-                <p className="management-subtitle-v13 mt-3">Node Location Overview</p>
-            </header>
 
             {/* ─── Stats + Legend + Geocode Action ─────────────────────── */}
             <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>

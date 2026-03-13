@@ -55,35 +55,31 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
             {/* ── Bottom ── */}
             <div className="sidebar-bottom">
 
-                {/* Avatar */}
-                <div className="relative group flex flex-col items-center">
-                    <div className="sidebar-avatar-wrap">
-                        {user?.avatar_url ? (
-                            <img src={user.avatar_url} alt="" className="sidebar-avatar-img" />
-                        ) : (
-                            <div className="sidebar-avatar-fallback">
-                                <span>{user?.full_name?.charAt(0)?.toUpperCase() || 'U'}</span>
-                            </div>
-                        )}
-                        {/* online dot — outside overflow:hidden */}
-                        <span className="sidebar-avatar-dot" />
-                    </div>
 
-                    <p className="sidebar-avatar-name">{user?.full_name?.split(' ')[0] || 'User'}</p>
-                    <p className="sidebar-avatar-role">{user?.dm_role || 'Member'}</p>
-
-                    {/* Hover tooltip */}
-                    <div className="sidebar-tooltip">
-                        <div className="flex items-center gap-3">
-                            <div className="sidebar-tooltip-icon">
-                                <span className="text-white font-black text-base">{user?.full_name?.charAt(0)?.toUpperCase() || 'U'}</span>
-                            </div>
-                            <div>
-                                <p className="text-[12px] font-black text-white leading-none mb-1">{user?.full_name || 'User'}</p>
-                                <p className="text-[9px] font-bold text-primary tracking-widest uppercase opacity-70">{user?.dm_role || 'Member'}</p>
-                            </div>
+                {/* User Profile */}
+                <div className="flex justify-center mb-4">
+                    <div className="relative">
+                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center overflow-hidden">
+                            {user?.avatar_url ? (
+                                <img src={user.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <span className="text-blue-400 font-bold text-xs">
+                                    {user?.email?.[0].toUpperCase() || 'U'}
+                                </span>
+                            )}
                         </div>
+                        <div className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-green-500 border-2 border-[#030712] rounded-full shadow-lg" />
                     </div>
+                </div>
+
+                {/* User Info Block */}
+                <div className="flex flex-col items-center mb-6 px-1">
+                    <span className="text-[11px] font-black text-white/90 truncate w-full text-center tracking-tight">
+                        {user?.full_name || 'User'}
+                    </span>
+                    <span className="text-[9px] font-bold text-blue-400/80 uppercase tracking-widest mt-0.5">
+                        {user?.dm_role || 'Member'}
+                    </span>
                 </div>
 
                 {/* Settings */}

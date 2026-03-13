@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
@@ -39,63 +40,8 @@ const AppContent = () => {
     const [view, setView] = useState('projects');
 
     useEffect(() => {
-        const AVATAR_CACHE_KEY = 'dm_avatar_cache';
-
-        const buildUserFast = (sessionUser) => {
-            if (!sessionUser) return null;
-            const isUeda = sessionUser.user_metadata?.full_name?.includes('上田') || sessionUser.email?.includes('ueda') || sessionUser.email === 'k_ueda@fts.co.jp';
-            // localStorageキャッシュからアバターを即時取得
-            let cachedAvatar = null;
-            try {
-                const cache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY) || '{}');
-                if (cache[sessionUser.id]) cachedAvatar = cache[sessionUser.id];
-            } catch { /* ignore */ }
-            return {
-                ...sessionUser,
-                full_name: sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown User',
-                avatar_url: sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture || cachedAvatar || null,
-                dm_role: isUeda ? 'Admin' : (sessionUser.user_metadata?.dm_role || (sessionUser.email?.includes('admin') ? 'Admin' : 'Manager'))
-            };
-        };
-
-        const fetchAvatarAsync = async (sessionUser) => {
-            if (!sessionUser) return;
-            const withTimeout = (promise, ms = 3000) =>
-                Promise.race([promise, new Promise(resolve => setTimeout(() => resolve(null), ms))]);
-
-            let avatar = null;
-            try {
-                const result = await withTimeout(supabase.from('profiles').select('avatar_url').eq('id', sessionUser.id).single());
-                if (result?.data?.avatar_url) avatar = result.data.avatar_url;
-            } catch { /* avatar fetch silenced */ }
-
-            if (avatar) {
-                // localStorageにキャッシュ保存（次回起動で即時表示）
-                try {
-                    const cache = JSON.parse(localStorage.getItem(AVATAR_CACHE_KEY) || '{}');
-                    cache[sessionUser.id] = avatar;
-                    localStorage.setItem(AVATAR_CACHE_KEY, JSON.stringify(cache));
-                } catch { /* ignore */ }
-                setUser(prev => prev ? { ...prev, avatar_url: avatar } : prev);
-            }
-        };
-
-        const checkUser = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const userData = buildUserFast(session?.user);
-            setUser(userData);
-            setAuthLoading(false);
-            fetchAvatarAsync(session?.user, session);
-        };
-
-        checkUser();
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-            const userData = buildUserFast(session?.user);
-            setUser(userData);
-            fetchAvatarAsync(session?.user, session);
-        });
-        return () => subscription.unsubscribe();
-    }, [setUser, setAuthLoading]);
+        // AppContext 側で enrichUser が行われるため、ここでは何もしない
+    }, []);
 
     if (authLoading) {
         return (
@@ -131,10 +77,77 @@ const AppContent = () => {
         <div className="app-container">
             <Sidebar activeTab={view} setActiveTab={setView} />
             <main className="main-content">
+                {/* ─── Global Fixed Header ────────────────────────── */}
+                <div className="global-fixed-header">
+                    <div className="header-content-inner">
+                        <header>
+                            <h1 className="text-6xl font-black title-gradient-v10 tracking-tighter uppercase">
+                                {view === 'dashboard' ? 'Dashboard' : 
+                                 view === 'projects' ? 'Projects' :
+                                 view === 'calendar' ? 'Calendar' :
+                                 view === 'route' ? 'Routes' :
+                                 view === 'map' ? 'Map' : 'Settings'}
+                            </h1>
+                            <p className="management-subtitle-v13 mt-3">
+                                {view === 'dashboard' ? 'Migration Progress Overview' : 
+                                 view === 'projects' ? 'Advanced Migration Control Interface' :
+                                 view === 'calendar' ? 'Real-time Asset Management System' :
+                                 view === 'route' ? 'Optimal Route Finder' :
+                                 view === 'map' ? 'Property Location View' : 'System Configuration'}
+                            </p>
+                        </header>
+                        <div className="header-actions">
+                            <ActiveUsers />
+                        </div>
+                    </div>
+                </div>
+
                 <div key={view} className="view-container view-enter">
                     {renderView()}
                 </div>
             </main>
+        </div>
+    );
+};
+
+/* ─── ActiveUsers ───────────────────────────────────────────────────────── */
+const ActiveUsers = () => {
+    const { activeUsers } = useApp();
+    if (!activeUsers || activeUsers.length === 0) return null;
+
+    return (
+        <div className="flex items-center -space-x-3 hover:space-x-1 transition-all duration-300">
+            <AnimatePresence>
+                {activeUsers.slice(0, 5).map((u, i) => (
+                    <motion.div
+                        key={u.id || i}
+                        initial={{ opacity: 0, scale: 0.8, x: 10 }}
+                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                        exit={{ opacity: 0, scale: 0.8, x: 10 }}
+                        className="relative group"
+                    >
+                        <div className="w-10 h-10 rounded-xl p-[1px] bg-gradient-to-br from-white/20 to-transparent border border-white/10 shadow-lg overflow-hidden backdrop-blur-md">
+                            {u.avatar_url ? (
+                                <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover rounded-[10px]" />
+                            ) : (
+                                <div className="w-full h-full flex items-center justify-center bg-white/5 text-[12px] font-black text-primary rounded-[10px]">
+                                    {(u.full_name || 'U').substring(0, 1).toUpperCase()}
+                                </div>
+                            )}
+                        </div>
+                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-[#030712] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                        
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/80 backdrop-blur-md border border-white/10 rounded-md text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[1000]">
+                            {u.full_name}
+                        </div>
+                    </motion.div>
+                ))}
+            </AnimatePresence>
+            {activeUsers.length > 5 && (
+                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 backdrop-blur-md">
+                    +{activeUsers.length - 5}
+                </div>
+            )}
         </div>
     );
 };

@@ -102,13 +102,7 @@ const Dashboard = () => {
 
     return (
         <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '56px' }}>
-            {/* ─── Header ─────────────────────────────────────────────── */}
-            <header className="pt-2" style={{ paddingBottom: '8px' }}>
-                <h1 className="text-6xl font-black title-gradient-v10 tracking-tighter">Dashboard</h1>
-                <p className="management-subtitle-v13 mt-3">Migration Progress Overview</p>
-            </header>
-
-            {/* ─── Stat Cards ──────────────────────────────────────────── */}
+            {/* Stat Cards ──────────────────────────────────────────── */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '48px' }}>
                 {statCards.map((item, idx) => (
                     <div key={idx} className="stat-card" style={{ padding: '1.75rem', border: `1px solid ${item.color}25`, boxShadow: `0 0 0 1px rgba(255,255,255,0.03), 0 8px 32px rgba(0,0,0,0.35), 0 0 40px ${item.glow}` }}>
