@@ -84,7 +84,14 @@ const ProjectRow = React.memo(({
                 <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
             </td>
             <td className="px-8 py-5 border-b border-white/[0.025] text-center">
-                <GlassDropdown value={project.status} onChange={(val) => updateProjectStatus(project.id, val)} options={['未対応', '対応予定', '対応済', 'リスケ']} disabled={!canInlineEdit} useStatusColor />
+                <GlassDropdown 
+                    value={project.status} 
+                    onChange={(val) => updateProjectStatus(project.id, val)} 
+                    options={['未対応', '対応予定', '対応済', 'リスケ']} 
+                    disabled={!canInlineEdit} 
+                    useStatusColor 
+                    isWarning={project.status === '対応予定' && !project.support_date}
+                />
             </td>
             <td className="p-5 border-b border-white/[0.02] text-center">
                 <div className="inline-flex items-center rounded-xl px-4 py-2.5 transition-all duration-300 group/date relative min-w-[145px] justify-center" style={{ background: STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)', border: `1px solid ${STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)'}` }}>
@@ -134,11 +141,12 @@ const ProjectRow = React.memo(({
 
 
 /* ─── GlassDropdown ─────────────────────────────────────────────────────── */
-const GlassDropdown = ({ value, onChange, options, labelPrefix = '', disabled = false, useStatusColor = false }) => {
+const GlassDropdown = ({ value, onChange, options, labelPrefix = '', disabled = false, useStatusColor = false, isWarning = false }) => {
     const [isOpen, setIsOpen] = useState(false);
     const [dropUp, setDropUp] = useState(false);
     const triggerRef = useRef(null);
     const sc = useStatusColor ? STATUS_COLORS[value] : null;
+    const textColor = isWarning ? '#ef4444' : (sc ? sc.text : undefined);
 
     const handleToggle = useCallback(() => {
         if (disabled) return;
@@ -162,7 +170,7 @@ const GlassDropdown = ({ value, onChange, options, labelPrefix = '', disabled = 
             <div
                 ref={triggerRef}
                 className={`motion-select-trigger-v13 active-click ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                style={sc ? { background: sc.bg, borderColor: sc.border, color: sc.text } : {}}
+                style={sc ? { background: sc.bg, borderColor: sc.border, color: textColor } : { color: textColor }}
                 onClick={handleToggle}
             >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -446,6 +454,12 @@ const ProjectList = () => {
 
     /* support_date 変更時：将来日付 & 未対応 → 対応予定に自動設定 */
     const handleSupportDateChange = (project, rawValue) => {
+        // 完了済み案件の日付変更時に警告を表示
+        if (project.status === '対応済') {
+            const ok = window.confirm('対応済みの案件の日付を変更しますか？');
+            if (!ok) return;
+        }
+
         const newDate = rawValue.replace(/-/g, '/');
         updateProjectField(project.id, 'support_date', newDate);
         if (rawValue && project.status === '未対応') {

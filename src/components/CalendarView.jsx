@@ -198,8 +198,14 @@ const CalendarView = () => {
             return pd.getFullYear() === year && pd.getMonth() === month;
         });
 
+        // 日付未設定の重要件数（対応済 or 対応予定で日付なし）
+        const unscheduledCount = projects.filter(p => 
+            (p.status === '対応予定' || p.status === '対応済') && !p.support_date
+        ).length;
+
         const stats = {
             total: monthProjects.length,
+            unscheduled: unscheduledCount,
             '対応済': 0,
             '対応予定': 0,
             '未対応': 0,
@@ -240,6 +246,23 @@ const CalendarView = () => {
                             <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>TOTAL</span>
                             <span style={{ fontSize: '15px', fontWeight: 900, color: '#fff', fontFamily: 'Outfit, sans-serif' }}>{monthlyStats.total}</span>
                         </div>
+
+                        {/* 日付未設定バッジ */}
+                        {monthlyStats.unscheduled > 0 && (
+                            <div style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                background: 'rgba(239,68,68,0.08)', 
+                                border: '1px solid rgba(239,68,68,0.25)', 
+                                borderRadius: '12px', 
+                                padding: '6px 14px' 
+                            }}>
+                                <span style={{ fontSize: '10px', fontWeight: 900, color: 'rgba(239,68,68,0.8)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>日付未設定</span>
+                                <span style={{ fontSize: '15px', fontWeight: 900, color: '#ef4444', fontFamily: 'Outfit, sans-serif' }}>{monthlyStats.unscheduled}</span>
+                            </div>
+                        )}
+
                         <div style={{ display: 'flex', gap: '8px' }}>
                             {Object.entries(STATUS_STYLE).map(([label, s]) => (
                                 <div key={label} style={{ 
