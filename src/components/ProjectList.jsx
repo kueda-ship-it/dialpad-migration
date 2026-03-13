@@ -503,7 +503,7 @@ const ProjectList = () => {
                 <div className="glass-panel p-5">
                     <div className="flex flex-wrap items-center gap-4">
                         {/* 検索 */}
-                        <div className="flex-[2] search-container-v7 min-w-[200px]">
+                        <div className="flex-[1.5] search-container-v7 min-w-[180px]">
                             <Search size={18} className="text-primary opacity-60 ml-2 mr-4" />
                             <input
                                 type="text"
@@ -521,14 +521,18 @@ const ProjectList = () => {
                         </div>
 
                         {/* Result Count Badge - Refined Design */}
-                        <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex-shrink-0 relative overflow-hidden group/match min-w-[140px]"
+                        <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex-shrink-0 relative group/match min-w-[170px]"
                              style={{ boxShadow: '0 4px 20px -5px rgba(59,130,246,0.1), inset 0 0 15px rgba(255,255,255,0.01)' }}>
-                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover/match:opacity-100 transition-opacity duration-700" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover/match:opacity-100 transition-opacity duration-700 rounded-2xl" />
                             <div className="flex flex-col items-start leading-none relative z-10">
-                                <span className="text-[7.5px] font-black text-white/30 uppercase tracking-[0.2em] mb-1 whitespace-nowrap">MATCHED RESULTS</span>
-                                <div className="flex items-baseline gap-1.5">
-                                    <span className="text-[18px] font-black text-blue-400 font-mono tracking-tighter" style={{ textShadow: '0 0 12px rgba(96,165,250,0.3)' }}>{filteredProjects.length}</span>
-                                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest">Nodes</span>
+                                <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
+                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em] whitespace-nowrap">MATCHED</span>
+                                    <div className="w-1 h-1 rounded-full bg-blue-500/30" />
+                                    <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em] whitespace-nowrap">RESULTS</span>
+                                </div>
+                                <div className="flex items-baseline gap-1.5 ml-0.5">
+                                    <span className="text-[20px] font-black text-blue-400 font-mono tracking-tighter" style={{ textShadow: '0 0 12px rgba(96,165,250,0.3)' }}>{filteredProjects.length}</span>
+                                    <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Nodes</span>
                                 </div>
                             </div>
                         </div>
