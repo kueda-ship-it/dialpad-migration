@@ -1254,7 +1254,7 @@ thead th {
 
 /* ─── Ultra Rich Header (Final Refined) ─── */
 .th-label-rich {
-  font-size: 13.5px !important; /* 11.5px -> 13.5px (+2px) */
+  font-size: 10px !important;
   font-weight: 950 !important;
   color: rgba(255, 255, 255, 0.5) !important;
   text-transform: uppercase;
@@ -1275,7 +1275,7 @@ thead th {
 /* ─── Sticky Table Header ─── */
 .sticky-table-header th {
   position: sticky !important;
-  top: 170px !important; /* Adjusted to sit tighter under filter-panel-sticky */
+  top: 256px !important; /* filter-panel-sticky(124px) + height(約132px) */
   z-index: 390; /* filter-panel-sticky(400) より下に配置 */
   background: rgba(3, 7, 18, 0.98) !important;
   backdrop-filter: blur(20px) saturate(180%);
