@@ -392,11 +392,13 @@ const ProjectList = () => {
     /* ─── Pagination ── */
     const PAGE_SIZE = 50;
     const [currentPage, setCurrentPage] = useState(1);
-    const totalPages = Math.ceil(filteredProjects.length / PAGE_SIZE);
+    const [isShowingAll, setIsShowingAll] = useState(false);
+    const totalPages = isShowingAll ? 1 : Math.ceil(filteredProjects.length / PAGE_SIZE);
     const pagedProjects = useMemo(() => {
+        if (isShowingAll) return filteredProjects;
         const start = (currentPage - 1) * PAGE_SIZE;
         return filteredProjects.slice(start, start + PAGE_SIZE);
-    }, [filteredProjects, currentPage]);
+    }, [filteredProjects, currentPage, isShowingAll]);
 
     // フィルター変更時はページ1に戻す
     React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, masterFilter]);
@@ -709,35 +711,59 @@ const ProjectList = () => {
                 </div>
             </main>
             {/* ─── Pagination ──────────────────────────────────────── */}
-            {totalPages > 1 && (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 0' }}>
+            {(totalPages > 1 || isShowingAll || filteredProjects.length > PAGE_SIZE) && (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.03)', marginTop: '10px' }}>
+                    {!isShowingAll && totalPages > 1 && (
+                        <>
+                            <button
+                                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                                disabled={currentPage === 1}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s' }}
+                            ><ChevronLeft size={14} /></button>
+
+                            {Array.from({ length: Math.min(totalPages, 9) }, (_, i) => {
+                                const page = totalPages <= 9 ? i + 1 : (
+                                    currentPage <= 5 ? i + 1 :
+                                    currentPage >= totalPages - 4 ? totalPages - 8 + i :
+                                    currentPage - 4 + i
+                                );
+                                return (
+                                    <button key={page} onClick={() => setCurrentPage(page)}
+                                        style={{ minWidth: '34px', height: '34px', borderRadius: '10px', border: page === currentPage ? '1px solid rgba(99,102,241,0.6)' : '1px solid rgba(255,255,255,0.07)', background: page === currentPage ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.03)', color: page === currentPage ? '#a5b4fc' : 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '11px', fontWeight: page === currentPage ? 900 : 600, transition: 'all 0.15s' }}
+                                    >{page}</button>
+                                );
+                            })}
+
+                            <button
+                                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                                disabled={currentPage === totalPages}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === totalPages ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s' }}
+                            ><ChevronRight size={14} /></button>
+                        </>
+                    )}
+
                     <button
-                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s' }}
-                    ><ChevronLeft size={14} /></button>
+                        onClick={() => setIsShowingAll(!isShowingAll)}
+                        style={{
+                            display: 'flex', alignItems: 'center', gap: '6px',
+                            padding: '7px 16px', borderRadius: '10px',
+                            border: isShowingAll ? '1px solid rgba(96, 165, 250, 0.4)' : '1px solid rgba(255,255,255,0.1)',
+                            background: isShowingAll ? 'rgba(96, 165, 250, 0.1)' : 'rgba(255,255,255,0.04)',
+                            color: isShowingAll ? '#60a5fa' : 'rgba(255,255,255,0.6)',
+                            cursor: 'pointer', fontSize: '10px', fontWeight: 900,
+                            letterSpacing: '0.05em', textTransform: 'uppercase',
+                            transition: 'all 0.2s', marginLeft: '12px'
+                        }}
+                        className="hover:scale-105 active:scale-95"
+                    >
+                        {isShowingAll ? 'Paginated View' : 'Show All Projects'}
+                    </button>
 
-                    {Array.from({ length: Math.min(totalPages, 9) }, (_, i) => {
-                        const page = totalPages <= 9 ? i + 1 : (
-                            currentPage <= 5 ? i + 1 :
-                            currentPage >= totalPages - 4 ? totalPages - 8 + i :
-                            currentPage - 4 + i
-                        );
-                        return (
-                            <button key={page} onClick={() => setCurrentPage(page)}
-                                style={{ minWidth: '34px', height: '34px', borderRadius: '10px', border: page === currentPage ? '1px solid rgba(99,102,241,0.6)' : '1px solid rgba(255,255,255,0.07)', background: page === currentPage ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.03)', color: page === currentPage ? '#a5b4fc' : 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '11px', fontWeight: page === currentPage ? 900 : 600, transition: 'all 0.15s' }}
-                            >{page}</button>
-                        );
-                    })}
-
-                    <button
-                        onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === totalPages ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s' }}
-                    ><ChevronRight size={14} /></button>
-
-                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginLeft: '8px', fontWeight: 600 }}>
-                        {(currentPage - 1) * 50 + 1}–{Math.min(currentPage * 50, filteredProjects.length)} / {filteredProjects.length} 件
+                    <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', marginLeft: '16px', fontWeight: 600, letterSpacing: '0.025em' }}>
+                        {isShowingAll 
+                            ? `Showing all ${filteredProjects.length} items`
+                            : `${(currentPage - 1) * PAGE_SIZE + 1}–${Math.min(currentPage * PAGE_SIZE, filteredProjects.length)} / ${filteredProjects.length} 件`
+                        }
                     </span>
                 </div>
             )}
