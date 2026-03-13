@@ -1,4 +1,3 @@
-```javascript
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { MOCK_PROJECTS } from '../utils/mockData';
