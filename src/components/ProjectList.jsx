@@ -639,7 +639,7 @@ const ProjectList = () => {
                     <div className="glass-panel-v13 px-8 pb-8 pt-4">
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-separate border-spacing-0">
-                                <thead className="relative">
+                                <thead className="relative sticky-table-header">
                                     <tr style={{ 
                                         background: 'linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
                                         backdropFilter: 'blur(20px) saturate(180%)',
