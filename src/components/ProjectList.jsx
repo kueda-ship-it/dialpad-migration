@@ -539,29 +539,7 @@ const ProjectList = () => {
                             </div>
                         </div>
 
-                        {/* Clear Selection Button */}
-                        <AnimatePresence>
-                            {selectedIds.length > 0 && (
-                                <motion.button
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -10 }}
-                                    onClick={() => setSelectedIds([])}
-                                    style={{
-                                        display: 'flex', alignItems: 'center', gap: '8px',
-                                        padding: '10px 18px', borderRadius: '14px',
-                                        background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
-                                        color: '#f87171', fontSize: '11px', fontWeight: 900,
-                                        letterSpacing: '0.1em', textTransform: 'uppercase',
-                                        boxShadow: '0 4px 15px rgba(239,68,68,0.1)'
-                                    }}
-                                    className="active-click group"
-                                >
-                                    <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
-                                    <span>Clear Selection ({selectedIds.length})</span>
-                                </motion.button>
-                            )}
-                        </AnimatePresence>
+                        </div>
 
                         <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
@@ -643,14 +621,41 @@ const ProjectList = () => {
                             <Download size={13} />
                             CSV
                         </button>
-                        <button
-                            className="btn-add-rich-v10 group flex-shrink-0 ml-auto"
-                            onClick={() => !isViewOnly && setIsAddModalOpen(true)}
-                            disabled={isViewOnly}
-                        >
-                            <Plus size={18} />
-                            <span>Create Node</span>
-                        </button>
+                        <div className="ml-auto flex items-center gap-4">
+                            <AnimatePresence mode="wait">
+                                {selectedIds.length > 0 && (
+                                    <motion.button
+                                        key="clear-btn"
+                                        initial={{ opacity: 0, scale: 0.9, x: 10 }}
+                                        animate={{ opacity: 1, scale: 1, x: 0 }}
+                                        exit={{ opacity: 0, scale: 0.9, x: 10 }}
+                                        onClick={() => setSelectedIds([])}
+                                        className="active-click group flex items-center gap-2"
+                                        style={{
+                                            padding: '8px 16px', borderRadius: '12px',
+                                            background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)',
+                                            color: '#f87171', fontSize: '10px', fontWeight: 900,
+                                            letterSpacing: '0.12em', textTransform: 'uppercase',
+                                            cursor: 'pointer', transition: 'all 0.2s',
+                                        }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.3)'; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.15)'; }}
+                                    >
+                                        <X size={12} className="group-hover:rotate-90 transition-transform duration-300" />
+                                        <span>Clear ({selectedIds.length})</span>
+                                    </motion.button>
+                                )}
+                            </AnimatePresence>
+                            
+                            <button
+                                className="btn-add-rich-v10 group flex-shrink-0"
+                                onClick={() => !isViewOnly && setIsAddModalOpen(true)}
+                                disabled={isViewOnly}
+                            >
+                                <Plus size={18} />
+                                <span>Create Node</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -663,12 +668,14 @@ const ProjectList = () => {
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead className="relative">
                                     <tr style={{ 
-                                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                                        backdropFilter: 'blur(12px)',
-                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)'
+                                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
+                                        backdropFilter: 'blur(20px) saturate(180%)',
+                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 15px rgba(0,0,0,0.15)'
                                     }}>
-                                        <th className="px-8 py-9 w-16 text-center border-b border-white/[0.08]" style={{ verticalAlign: 'middle' }}>
-                                            <Check size={16} className="mx-auto text-white opacity-70" style={{ filter: 'drop-shadow(0 0 8px rgba(255,255,255,0.2))' }} />
+                                        <th className="px-8 py-9 w-16 text-center border-b border-white/[0.12]" style={{ verticalAlign: 'middle' }}>
+                                            <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Check size={18} className="text-white opacity-90" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
+                                            </div>
                                         </th>
                                         <th className="px-8 py-9 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('id')}>
                                             <div className="flex items-center gap-2">号機 <SortIcon columnKey="id" sortConfig={sortConfig} /></div>

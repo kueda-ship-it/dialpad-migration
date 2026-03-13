@@ -1251,3 +1251,23 @@ thead th {
     max-width: 150px;
   }
 }
+
+/* ─── Ultra Rich Header (Final Refined) ─── */
+.th-label-rich {
+  font-size: 9.5px !important;
+  font-weight: 950 !important;
+  color: rgba(255, 255, 255, 0.5) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.28em !important;
+  white-space: nowrap;
+  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.th-label-rich:hover {
+  color: #ffffff !important;
+  letter-spacing: 0.32em !important;
+  text-shadow: 0 0 25px rgba(255, 255, 255, 0.6), 0 0 40px rgba(255, 255, 255, 0.2);
+  transform: translateY(-1.5px);
+  cursor: pointer;
+}
