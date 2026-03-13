@@ -635,9 +635,9 @@ const ProjectList = () => {
 
             {/* ─── Table ───────────────────────────────────────────────── */}
             <main className="relative z-10 px-8 mt-8">
-                <div className="overflow-hidden rounded-2xl border border-white/[0.04]">
+                <div className="rounded-2xl border border-white/[0.04]">
                     <div className="glass-panel-v13 px-8 pb-8 pt-4">
-                        <div className="overflow-x-auto">
+                        <div>
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead className="relative sticky-table-header">
                                     <tr style={{ 
