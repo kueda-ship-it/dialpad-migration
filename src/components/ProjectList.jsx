@@ -305,8 +305,25 @@ const ProjectRow = React.memo(({
             <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
                 <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
             </td>
-            <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
+            <td className="px-3 py-4 border-b border-white/[0.025] text-center align-middle">
+                {project.maintenance_month
+                    ? <div className="flex flex-wrap gap-1 justify-center" style={{ maxWidth: 112, margin: '0 auto' }}>
+                        {project.maintenance_month.toString().split(',').map(m => m.trim()).filter(Boolean).map(m => (
+                            <span key={m} style={{
+                                display: 'inline-flex', alignItems: 'center',
+                                padding: '2px 7px', borderRadius: '6px',
+                                fontSize: '12px', fontWeight: 700, fontFamily: 'Outfit, monospace',
+                                background: 'rgba(255,255,255,0.06)',
+                                border: '1px solid rgba(255,255,255,0.09)',
+                                color: 'rgba(255,255,255,0.6)',
+                                letterSpacing: '0.02em',
+                            }}>
+                                {m}月
+                            </span>
+                        ))}
+                    </div>
+                    : <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.2)' }}>---</span>
+                }
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] text-center align-middle">
                 <GlassDropdown 
@@ -879,7 +896,7 @@ const ProjectList = () => {
                                         <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-4 py-6 w-[130px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
                                         <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('status')}>
