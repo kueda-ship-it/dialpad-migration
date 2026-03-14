@@ -253,6 +253,22 @@ const ProjectRow = React.memo(({
         project.status === '対応済' ? 'row-completed' :
             project.status === '対応予定' ? 'row-planned' : '';
 
+    const [masterWarnPos, setMasterWarnPos] = useState(null);
+    const masterBtnRef = useRef(null);
+
+    const handleMasterClick = (e) => {
+        e.stopPropagation();
+        if (isViewOnly) return;
+        // 対応日未設定 & これからONにしようとしている場合は警告
+        if (!project.master_update_done && !project.support_date) {
+            const rect = masterBtnRef.current.getBoundingClientRect();
+            setMasterWarnPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
+            setTimeout(() => setMasterWarnPos(null), 2800);
+            return;
+        }
+        toggleMasterUpdate(project.id);
+    };
+
     const formatMaintenanceMonth = (month) => {
         if (!month) return '---';
         return month.toString().split(',').map(m => `${m.trim()}月`).join(', ');
@@ -348,16 +364,20 @@ const ProjectRow = React.memo(({
             <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
                 <div className="flex justify-center">
                     <button
-                        onClick={(e) => { e.stopPropagation(); !isViewOnly && toggleMasterUpdate(project.id); }}
+                        ref={masterBtnRef}
+                        onClick={handleMasterClick}
                         className={`btn-square-v9 flex items-center justify-center transition-all ${project.master_update_done
                             ? 'border-[#a855f7]/80 bg-[#a855f7]/05 text-[#a855f7] scale-105'
-                            : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
+                            : !project.support_date
+                                ? 'bg-white/5 text-white/10 border-white/5 border-dashed'
+                                : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
                         style={{
                             width: '42px', height: '42px', borderRadius: '12px',
                             filter: project.master_update_done ? 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.6))' : 'none',
                             boxShadow: project.master_update_done ? 'inset 0 0 10px rgba(168, 85, 247, 0.3)' : 'none'
                         }}
                         disabled={isViewOnly}
+                        title={!project.master_update_done && !project.support_date ? '対応日を設定してからマスタ更新してください' : undefined}
                     >
                         <FileCheck
                             size={17}
@@ -370,6 +390,44 @@ const ProjectRow = React.memo(({
                         />
                     </button>
                 </div>
+                {/* 警告ポップアップ */}
+                {masterWarnPos && createPortal(
+                    <div
+                        style={{
+                            position: 'fixed',
+                            top: masterWarnPos.top,
+                            left: masterWarnPos.left,
+                            transform: 'translate(-50%, -100%)',
+                            zIndex: 9999,
+                            background: 'linear-gradient(135deg, #1e1a2e, #1a1526)',
+                            border: '1px solid rgba(239,68,68,0.4)',
+                            borderRadius: '10px',
+                            padding: '8px 14px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(239,68,68,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            whiteSpace: 'nowrap',
+                            animation: 'fadeInUp 0.2s ease',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <span style={{ fontSize: '14px' }}>⚠️</span>
+                        <div>
+                            <p style={{ fontSize: '12px', fontWeight: 700, color: '#f87171', margin: 0 }}>対応日が未設定です</p>
+                            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>先に対応日を入力してください</p>
+                        </div>
+                        {/* 吹き出し三角 */}
+                        <div style={{
+                            position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                            width: 0, height: 0,
+                            borderLeft: '6px solid transparent',
+                            borderRight: '6px solid transparent',
+                            borderTop: '6px solid rgba(239,68,68,0.4)',
+                        }} />
+                    </div>,
+                    document.body
+                )}
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
                 <div className="flex items-center justify-end gap-2">

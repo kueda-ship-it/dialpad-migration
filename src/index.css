@@ -1328,3 +1328,7 @@ tbody td {
 .ProjectRow td {
   vertical-align: middle !important;
 }
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translate(-50%, -90%); }
+  to   { opacity: 1; transform: translate(-50%, -100%); }
+}
