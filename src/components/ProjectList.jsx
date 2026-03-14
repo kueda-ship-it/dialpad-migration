@@ -17,6 +17,105 @@ const STATUS_COLORS = {
     'リスケ': { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.32)', text: '#f87171', dot: 'rgba(239,68,68,0.9)' },
 };
 
+/* ─── MiniCalendar ────────────────────────────────────────────────────────── */
+const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+const MiniCalendar = ({ value, onChange, onClear }) => {
+    const today = new Date();
+    const initDate = value ? new Date(value.replace(/\//g, '-')) : today;
+    const [viewYear, setViewYear] = useState(initDate.getFullYear());
+    const [viewMonth, setViewMonth] = useState(initDate.getMonth());
+
+    const selectedStr = value ? value.replace(/\//g, '-') : '';
+
+    const prevMonth = (e) => { e.stopPropagation(); setViewMonth(m => { if (m === 0) { setViewYear(y => y - 1); return 11; } return m - 1; }); };
+    const nextMonth = (e) => { e.stopPropagation(); setViewMonth(m => { if (m === 11) { setViewYear(y => y + 1); return 0; } return m + 1; }); };
+
+    // Build calendar grid
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+    const toStr = (d) => `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
+    return (
+        <div style={{ width: 252 }} onMouseDown={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 px-1">
+                <button type="button" onPointerDown={prevMonth}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white">
+                    <ChevronLeft size={14} />
+                </button>
+                <span className="text-[13px] font-bold text-white/90 tracking-wide select-none">
+                    {viewYear}年 {viewMonth + 1}月
+                </span>
+                <button type="button" onPointerDown={nextMonth}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white">
+                    <ChevronRight size={14} />
+                </button>
+            </div>
+
+            {/* Week labels */}
+            <div className="grid grid-cols-7 mb-1">
+                {WEEK_DAYS.map((w, i) => (
+                    <div key={w} className="text-center text-[11px] font-semibold py-1 select-none"
+                        style={{ color: i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : 'rgba(255,255,255,0.3)' }}>
+                        {w}
+                    </div>
+                ))}
+            </div>
+
+            {/* Days */}
+            <div className="grid grid-cols-7 gap-y-0.5">
+                {cells.map((d, idx) => {
+                    if (!d) return <div key={`e-${idx}`} />;
+                    const ds = toStr(d);
+                    const isSelected = ds === selectedStr;
+                    const isToday = ds === todayStr;
+                    const isSun = (idx % 7) === 0;
+                    const isSat = (idx % 7) === 6;
+                    return (
+                        <button
+                            key={ds}
+                            type="button"
+                            onPointerDown={(e) => { e.stopPropagation(); onChange(ds); }}
+                            className="h-8 w-full flex items-center justify-center rounded-lg text-[12px] font-medium transition-all select-none"
+                            style={{
+                                background: isSelected ? 'rgba(139,92,246,0.85)' : isToday ? 'rgba(139,92,246,0.18)' : 'transparent',
+                                color: isSelected ? '#fff' : isToday ? '#a78bfa' : isSun ? '#f87171' : isSat ? '#60a5fa' : 'rgba(255,255,255,0.75)',
+                                fontWeight: isSelected || isToday ? 700 : 400,
+                                boxShadow: isSelected ? '0 0 10px rgba(139,92,246,0.5)' : 'none',
+                            }}
+                            onMouseOver={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                            onMouseOut={e => { if (!isSelected) e.currentTarget.style.background = isToday ? 'rgba(139,92,246,0.18)' : 'transparent'; }}
+                        >
+                            {d}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Clear button */}
+            <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <button
+                    type="button"
+                    onPointerDown={(e) => { e.stopPropagation(); onClear(); }}
+                    className="w-full py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                    style={{ color: selectedStr ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.2)', cursor: selectedStr ? 'pointer' : 'default', border: '1px solid transparent' }}
+                    disabled={!selectedStr}
+                    onMouseOver={e => { if (selectedStr) { e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.2)'; e.currentTarget.style.color = '#f87171'; } }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = selectedStr ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.2)'; }}
+                >
+                    日付をクリア
+                </button>
+            </div>
+        </div>
+    );
+};
+
 /* ─── InlineDatePicker ────────────────────────────────────────────────────── */
 const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
     const [showPicker, setShowPicker] = useState(false);
@@ -27,15 +126,21 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
     const openPicker = () => {
         if (!canInlineEdit) return;
         const rect = btnRef.current.getBoundingClientRect();
-        setPickerPos({ top: rect.bottom + 6, left: rect.left });
+        // ポップアップが画面右端を超えないよう調整
+        const left = Math.min(rect.left, window.innerWidth - 280);
+        setPickerPos({ top: rect.bottom + 6, left });
         setShowPicker(true);
     };
 
-    const clearDate = (e) => {
+    const clearDate = () => {
+        onDateChange(project, '');
+        setShowPicker(false);
+    };
+
+    const handleXBtn = (e) => {
         e.stopPropagation();
         e.preventDefault();
         onDateChange(project, '');
-        setShowPicker(false);
     };
 
     useEffect(() => {
@@ -49,8 +154,10 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
         <>
             <div
                 ref={btnRef}
-                className="flex items-center rounded-xl px-3 gap-2 transition-all min-w-[160px] h-[44px] border select-none"
+                className="flex items-center rounded-xl gap-2 transition-all h-[44px] border select-none"
                 style={{
+                    minWidth: 160,
+                    padding: '0 8px 0 12px',
                     background: project.support_date ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)',
                     border: `1px solid ${project.support_date ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)'}`,
                     cursor: canInlineEdit ? 'pointer' : 'default',
@@ -70,48 +177,34 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
                 {canInlineEdit && project.support_date && (
                     <button
                         type="button"
-                        onPointerDown={clearDate}
-                        className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/35 hover:text-white/80 flex-shrink-0"
+                        onPointerDown={handleXBtn}
+                        className="flex-shrink-0 flex items-center justify-center rounded-full transition-colors"
+                        style={{ width: 22, height: 22, color: 'rgba(255,255,255,0.35)', marginRight: 2 }}
+                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; }}
                         title="日付を解除"
                     >
-                        <X size={12} />
+                        <X size={11} />
                     </button>
                 )}
             </div>
 
             {showPicker && canInlineEdit && createPortal(
                 <div
-                    className="fixed rounded-xl border border-white/10 shadow-2xl p-3 flex flex-col gap-2"
+                    className="fixed rounded-2xl border border-white/[0.1] shadow-2xl p-3"
                     style={{
                         top: pickerPos.top, left: pickerPos.left,
-                        background: '#1a2540', zIndex: 9999, minWidth: 200,
-                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                        background: 'linear-gradient(135deg, #1a2540 0%, #151e35 100%)',
+                        zIndex: 9999,
+                        boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
                     }}
                     onMouseDown={(e) => e.stopPropagation()}
                 >
-                    <input
-                        type="date"
-                        autoFocus
-                        className="w-full rounded-lg px-3 py-2 text-white text-sm [color-scheme:dark] outline-none"
-                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
-                        value={project.support_date ? project.support_date.replace(/\//g, '-') : ''}
-                        onChange={(e) => {
-                            onDateChange(project, e.target.value);
-                            setShowPicker(false);
-                        }}
+                    <MiniCalendar
+                        value={project.support_date}
+                        onChange={(ds) => { onDateChange(project, ds); setShowPicker(false); }}
+                        onClear={clearDate}
                     />
-                    {project.support_date && (
-                        <button
-                            type="button"
-                            className="w-full text-center text-xs py-1.5 rounded-lg transition-colors"
-                            style={{ color: 'rgba(248,113,113,0.8)', border: '1px solid rgba(248,113,113,0.15)' }}
-                            onPointerDown={clearDate}
-                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.color = '#f87171'; }}
-                            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(248,113,113,0.8)'; }}
-                        >
-                            日付をクリア
-                        </button>
-                    )}
                 </div>,
                 document.body
             )}
