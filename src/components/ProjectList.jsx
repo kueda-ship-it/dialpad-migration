@@ -17,6 +17,33 @@ const STATUS_COLORS = {
     'リスケ': { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.32)', text: '#f87171', dot: 'rgba(239,68,68,0.9)' },
 };
 
+/* ─── 日本の祝日判定 ──────────────────────────────────────────────────────── */
+const getJpHolidays = (year) => {
+    const h = new Set();
+    const add = (m, d) => h.add(`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    // 春分・秋分 (近似計算)
+    const shunbun = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    const shubun  = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    // 固定祝日
+    add(1,1); add(2,11); add(2,23); add(4,29); add(5,3); add(5,4); add(5,5);
+    add(8,11); add(11,3); add(11,23); add(3,shunbun); add(9,shubun);
+    // ハッピーマンデー
+    const nthMon = (m, n) => { const d = new Date(year,m-1,1); const diff=(1-d.getDay()+7)%7; return new Date(year,m-1,1+diff+(n-1)*7).getDate(); };
+    add(1, nthMon(1,2)); // 成人の日
+    add(7, nthMon(7,3)); // 海の日
+    add(9, nthMon(9,3)); // 敬老の日
+    add(10,nthMon(10,2));// 体育の日
+    // 振替休日：日曜祝日の翌月曜
+    const dates = [...h].map(s => new Date(s));
+    dates.forEach(d => {
+        if (d.getDay() === 0) {
+            const next = new Date(d); next.setDate(next.getDate()+1);
+            h.add(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`);
+        }
+    });
+    return h;
+};
+
 /* ─── MiniCalendar ────────────────────────────────────────────────────────── */
 const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
 
@@ -40,6 +67,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
 
     const toStr = (d) => `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const holidays = useMemo(() => getJpHolidays(viewYear), [viewYear]);
 
     return (
         <div style={{ width: 252 }} onMouseDown={e => e.stopPropagation()}>
@@ -77,6 +105,8 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
                     const isToday = ds === todayStr;
                     const isSun = (idx % 7) === 0;
                     const isSat = (idx % 7) === 6;
+                    const isHoliday = holidays.has(ds);
+                    const isRed = isSun || isHoliday;
                     return (
                         <button
                             key={ds}
@@ -85,7 +115,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
                             className="h-8 w-full flex items-center justify-center rounded-lg text-[12px] font-medium transition-all select-none"
                             style={{
                                 background: isSelected ? 'rgba(139,92,246,0.85)' : isToday ? 'rgba(139,92,246,0.18)' : 'transparent',
-                                color: isSelected ? '#fff' : isToday ? '#a78bfa' : isSun ? '#f87171' : isSat ? '#60a5fa' : 'rgba(255,255,255,0.75)',
+                                color: isSelected ? '#fff' : isToday ? '#a78bfa' : isRed ? '#f87171' : isSat ? '#60a5fa' : 'rgba(255,255,255,0.75)',
                                 fontWeight: isSelected || isToday ? 700 : 400,
                                 boxShadow: isSelected ? '0 0 10px rgba(139,92,246,0.5)' : 'none',
                             }}
