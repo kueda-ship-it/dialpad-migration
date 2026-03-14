@@ -307,18 +307,19 @@ const ProjectRow = React.memo(({
             </td>
             <td className="px-3 py-4 border-b border-white/[0.025] text-center align-middle">
                 {project.maintenance_month
-                    ? <div className="flex flex-wrap gap-1 justify-center" style={{ maxWidth: 112, margin: '0 auto' }}>
+                    ? <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '3px', justifyContent: 'center', alignItems: 'center' }}>
                         {project.maintenance_month.toString().split(',').map(m => m.trim()).filter(Boolean).map(m => (
                             <span key={m} style={{
-                                display: 'inline-flex', alignItems: 'center',
-                                padding: '2px 7px', borderRadius: '6px',
-                                fontSize: '12px', fontWeight: 700, fontFamily: 'Outfit, monospace',
-                                background: 'rgba(255,255,255,0.06)',
-                                border: '1px solid rgba(255,255,255,0.09)',
-                                color: 'rgba(255,255,255,0.6)',
-                                letterSpacing: '0.02em',
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                minWidth: '26px', padding: '2px 4px', borderRadius: '5px',
+                                fontSize: '11px', fontWeight: 700, fontFamily: 'Outfit, monospace',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                color: 'rgba(255,255,255,0.55)',
+                                letterSpacing: '0',
+                                flexShrink: 0,
                             }}>
-                                {m}月
+                                {m}
                             </span>
                         ))}
                     </div>
@@ -884,7 +885,31 @@ const ProjectList = () => {
                                     <tr>
                                         <th className="px-4 py-10 w-16 text-center border-b border-white/[0.12] align-middle" style={{ verticalAlign: 'middle' }}>
                                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Check size={18} className="text-white opacity-90" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
+                                                <button
+                                                    type="button"
+                                                    title={selectedIds.length > 0 ? '全解除' : '全選択'}
+                                                    onClick={() => {
+                                                        if (selectedIds.length > 0) {
+                                                            setSelectedIds([]);
+                                                        } else {
+                                                            setSelectedIds(pagedProjects.map(p => p.id));
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        width: 28, height: 28, borderRadius: 8,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        border: `1px solid ${selectedIds.length > 0 ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.2)'}`,
+                                                        background: selectedIds.length > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)',
+                                                        cursor: 'pointer', transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseOver={e => { e.currentTarget.style.background = selectedIds.length > 0 ? 'rgba(239,68,68,0.22)' : 'rgba(255,255,255,0.12)'; }}
+                                                    onMouseOut={e => { e.currentTarget.style.background = selectedIds.length > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)'; }}
+                                                >
+                                                    {selectedIds.length > 0
+                                                        ? <X size={14} style={{ color: '#f87171' }} />
+                                                        : <Check size={14} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                                                    }
+                                                </button>
                                             </div>
                                         </th>
                                         <th className="px-4 py-6 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('id')}>
@@ -954,7 +979,7 @@ const ProjectList = () => {
                                 }}
                             >
                                 <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
-                                <span>Clear Selection ({selectedIds.length})</span>
+                                <span>{selectedIds.length}件を選択中 — 全解除</span>
                             </motion.button>
                         )}
                     </AnimatePresence>
