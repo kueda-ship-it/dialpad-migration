@@ -407,8 +407,7 @@ export const AppProvider = ({ children }) => {
         licenseTimeoutRef.current = setTimeout(async () => {
             await supabase
                 .from('system_settings')
-                .update({ value: { total: newCount } })
-                .eq('key', 'license_pool');
+                .upsert({ key: 'license_pool', value: { total: newCount } }, { onConflict: 'key' });
         }, 500); // 500ms 停止後に送信
     };
 
