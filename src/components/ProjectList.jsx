@@ -17,6 +17,108 @@ const STATUS_COLORS = {
     'リスケ': { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.32)', text: '#f87171', dot: 'rgba(239,68,68,0.9)' },
 };
 
+/* ─── InlineDatePicker ────────────────────────────────────────────────────── */
+const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
+    const [showPicker, setShowPicker] = useState(false);
+    const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
+    const btnRef = useRef(null);
+    const sc = STATUS_COLORS[project.status] || {};
+
+    const openPicker = () => {
+        if (!canInlineEdit) return;
+        const rect = btnRef.current.getBoundingClientRect();
+        setPickerPos({ top: rect.bottom + 6, left: rect.left });
+        setShowPicker(true);
+    };
+
+    const clearDate = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onDateChange(project, '');
+        setShowPicker(false);
+    };
+
+    useEffect(() => {
+        if (!showPicker) return;
+        const handler = () => setShowPicker(false);
+        document.addEventListener('mousedown', handler, true);
+        return () => document.removeEventListener('mousedown', handler, true);
+    }, [showPicker]);
+
+    return (
+        <>
+            <div
+                ref={btnRef}
+                className="flex items-center rounded-xl px-3 gap-2 transition-all min-w-[160px] h-[44px] border select-none"
+                style={{
+                    background: project.support_date ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${project.support_date ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)'}`,
+                    cursor: canInlineEdit ? 'pointer' : 'default',
+                }}
+                onClick={openPicker}
+            >
+                <Calendar
+                    size={14}
+                    style={{ color: sc.text || 'var(--primary)', opacity: project.support_date ? 0.65 : 0.25 }}
+                    className="flex-shrink-0"
+                />
+                <span className="text-[13px] font-bold flex-1 text-left truncate" style={{ color: sc.text || '#fff' }}>
+                    {project.support_date
+                        ? project.support_date.replace(/\//g, '-')
+                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '12px' }}>未設定</span>}
+                </span>
+                {canInlineEdit && project.support_date && (
+                    <button
+                        type="button"
+                        onPointerDown={clearDate}
+                        className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/35 hover:text-white/80 flex-shrink-0"
+                        title="日付を解除"
+                    >
+                        <X size={12} />
+                    </button>
+                )}
+            </div>
+
+            {showPicker && canInlineEdit && createPortal(
+                <div
+                    className="fixed rounded-xl border border-white/10 shadow-2xl p-3 flex flex-col gap-2"
+                    style={{
+                        top: pickerPos.top, left: pickerPos.left,
+                        background: '#1a2540', zIndex: 9999, minWidth: 200,
+                        boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                >
+                    <input
+                        type="date"
+                        autoFocus
+                        className="w-full rounded-lg px-3 py-2 text-white text-sm [color-scheme:dark] outline-none"
+                        style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)' }}
+                        value={project.support_date ? project.support_date.replace(/\//g, '-') : ''}
+                        onChange={(e) => {
+                            onDateChange(project, e.target.value);
+                            setShowPicker(false);
+                        }}
+                    />
+                    {project.support_date && (
+                        <button
+                            type="button"
+                            className="w-full text-center text-xs py-1.5 rounded-lg transition-colors"
+                            style={{ color: 'rgba(248,113,113,0.8)', border: '1px solid rgba(248,113,113,0.15)' }}
+                            onPointerDown={clearDate}
+                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.color = '#f87171'; }}
+                            onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(248,113,113,0.8)'; }}
+                        >
+                            日付をクリア
+                        </button>
+                    )}
+                </div>,
+                document.body
+            )}
+        </>
+    );
+};
+
 /* ─── ProjectRow (Memoized) ──────────────────────────────────────────────── */
 const ProjectRow = React.memo(({
     project, isSelected, toggleSelection,
@@ -94,60 +196,12 @@ const ProjectRow = React.memo(({
                 />
             </td>
             <td className="px-4 py-4 border-b border-white/[0.02] text-center align-middle">
-                <div 
-                    className="flex items-center rounded-xl px-4 py-3 transition-all duration-300 group/date relative min-w-[170px] min-h-[44px] justify-center hover:border-white/20 overflow-hidden"
-                    style={{ 
-                        background: project.support_date ? (STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)') : 'rgba(255,255,255,0.01)', 
-                        border: `1px solid ${project.support_date ? (STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)') : 'rgba(255,255,255,0.05)'}`,
-                        cursor: 'pointer'
-                    }}
-                >
-                    {/* アイコンとテキストを包むレイヤー */}
-                    <div className="flex items-center justify-between gap-2 z-0 relative pointer-events-none w-full px-3">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                            <Calendar 
-                                size={14} 
-                                style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)' }} 
-                                className={`flex-shrink-0 transition-opacity duration-300 ${project.support_date ? 'opacity-60' : 'opacity-20 group-hover/date:opacity-40'}`} 
-                            />
-                            {project.support_date && (
-                                <span className="text-[14px] font-bold truncate" style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }}>
-                                    {project.support_date.replace(/\//g, '-')}
-                                </span>
-                            )}
-                        </div>
-                        
-                        {canInlineEdit && project.support_date && (
-                            <button 
-                                type="button"
-                                onClick={(e) => { 
-                                    e.preventDefault();
-                                    e.stopPropagation(); 
-                                    handleSupportDateChange(project, ''); 
-                                }}
-                                className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/40 hover:text-white z-20 pointer-events-auto"
-                                title="日付を解除"
-                            >
-                                <X size={13} />
-                            </button>
-                        )}
-                    </div>
-
-                    {canInlineEdit && (
-                        <input 
-                            type="date" 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [color-scheme:dark] z-10" 
-                            value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} 
-                            onChange={(e) => handleSupportDateChange(project, e.target.value)} 
-                            onClick={(e) => {
-                                try { e.target.showPicker(); } catch(err) {}
-                            }}
-                        />
-                    )}
-
-                    {!canInlineEdit && project.support_date && (
-                        <span className="text-[14px] font-bold font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.1)' }}>{project.support_date}</span>
-                    )}
+                <div className="flex justify-center">
+                    <InlineDatePicker
+                        project={project}
+                        canInlineEdit={canInlineEdit}
+                        onDateChange={handleSupportDateChange}
+                    />
                 </div>
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
