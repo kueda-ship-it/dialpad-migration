@@ -247,11 +247,20 @@ export const AppProvider = ({ children }) => {
     }, [fetchProjects, authLoading]);
     const [selectedIds, setSelectedIds] = useState([]);
     const [notifications, setNotifications] = useState([]);
-    const [notificationSettings, setNotificationSettings] = useState({
-        targetUsers: ['admin', 'manager'], // Default notification targets
-        emailEnabled: true,
-        pushEnabled: true
+    const [notificationSettings, setNotificationSettings] = useState(() => {
+        try {
+            const saved = localStorage.getItem('dm_notification_settings');
+            if (saved) return JSON.parse(saved);
+        } catch { /* ignore */ }
+        return { targetUsers: ['Admin', 'Manager'], emailEnabled: false, pushEnabled: false };
     });
+
+    // localStorageへ永続化
+    useEffect(() => {
+        try {
+            localStorage.setItem('dm_notification_settings', JSON.stringify(notificationSettings));
+        } catch { /* ignore */ }
+    }, [notificationSettings]);
 
     // Generate automatic notifications based on project status and dates
     useEffect(() => {
@@ -273,7 +282,7 @@ export const AppProvider = ({ children }) => {
                     id: `warn-master-${p.id}`,
                     type: 'warning',
                     title: 'マスタ未更新警告',
-                    message: `号機:${p.unit_id} (${p.name}) の対応が明日ですが、マスタ更新が未完了です。`,
+                    message: `${p.name} の対応が明日ですが、マスタ更新が未完了です。`,
                     projectId: p.id,
                     date: new Date()
                 });
@@ -287,7 +296,7 @@ export const AppProvider = ({ children }) => {
                     id: `overdue-7d-${p.id}`,
                     type: 'error',
                     title: '長期未完了アラート',
-                    message: `号機:${p.unit_id} (${p.name}) は対応日から7日以上経過していますが、未完了です。`,
+                    message: `${p.name} は対応日から7日以上経過していますが、未完了です。`,
                     projectId: p.id,
                     date: new Date()
                 });
@@ -296,6 +305,28 @@ export const AppProvider = ({ children }) => {
 
         setNotifications(newNotifications);
     }, [projects]);
+
+    // ブラウザPush通知の実行
+    useEffect(() => {
+        if (!notificationSettings.pushEnabled) return;
+        if (typeof Notification === 'undefined') return;
+        if (Notification.permission !== 'granted') return;
+        if (!notifications.length) return;
+
+        const todayKey = new Date().toDateString();
+        notifications.forEach(n => {
+            const sentKey = `dm_push_sent_${n.id}_${todayKey}`;
+            if (sessionStorage.getItem(sentKey)) return;
+            try {
+                new Notification(n.title, {
+                    body: n.message,
+                    icon: '/app-icon.png',
+                    badge: '/app-icon.png',
+                });
+                sessionStorage.setItem(sentKey, '1');
+            } catch { /* ignore */ }
+        });
+    }, [notifications, notificationSettings.pushEnabled]);
 
     useEffect(() => {
         if (projects.length > 0) {

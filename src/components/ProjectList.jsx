@@ -1098,7 +1098,7 @@ const ProjectList = () => {
                                                 onChange={e => setNewProject({ ...newProject, phone: e.target.value })}
                                             />
                                         </Field>
-                                        <Field label="通信タイプ" required>
+                                        <Field label="タイプ" required>
                                             <input
                                                 type="text" required placeholder="例: Ethernet / H95"
                                                 style={inputStyle}
@@ -1253,7 +1253,7 @@ const ProjectList = () => {
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-5">
-                                            <Field label="通信タイプ">
+                                            <Field label="タイプ">
                                                 <input
                                                     type="text"
                                                     style={inputStyle}
@@ -1408,7 +1408,7 @@ const ProjectList = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <Cpu size={13} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
                                                 <div>
-                                                    <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>通信タイプ</label>
+                                                    <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>タイプ</label>
                                                     <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '3px' }}>{dp.locker_type || '---'}</p>
                                                 </div>
                                             </div>
