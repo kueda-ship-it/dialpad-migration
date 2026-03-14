@@ -344,7 +344,7 @@ body {
   color: white !important;
   padding: 14px 0;
   width: 100%;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -457,7 +457,7 @@ body {
   border-radius: 10px;
   padding: 8px 14px;
   color: #fff;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 800;
   display: flex;
   align-items: center;
@@ -909,9 +909,9 @@ button:not(:disabled):active {
 }
 
 .global-fixed-header {
-  position: sticky;
+  position: relative; /* 固定を解除して表示領域を確保 */
   top: 0;
-  z-index: 500;
+  z-index: 50;
   width: 100%;
   background: rgba(3, 7, 18, 0.85);
   backdrop-filter: blur(32px) saturate(180%);
@@ -942,18 +942,18 @@ button:not(:disabled):active {
 @keyframes view-fade-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    /* transform: translateY(6px); // stickyを阻害するため削除 */
   }
 
   to {
     opacity: 1;
-
+    /* transform: translateY(0); // stickyを阻害するため削除 */
   }
 }
 
 .filter-panel-sticky {
   position: sticky;
-  top: 124px; /* ヘッダーの高さ (40+60+14+10=約124px) に合わせる */
+  top: 0; /* タイトルはスクロールし、検索バーのみがトップに固定される */
   z-index: 400;
   margin: 0 -32px;
   padding: 10px 32px; /* パディングを少し縮小して密着感を出す */
@@ -988,6 +988,14 @@ button:not(:disabled):active {
 
 .date-input-v17:hover::-webkit-calendar-picker-indicator {
   opacity: 0.8;
+}
+
+/* 未設定時にカレンダーの値を隠す（空白化） */
+input[type="date"].date-empty {
+  color: transparent !important;
+}
+input[type="date"].date-empty::-webkit-datetime-edit {
+  display: none !important;
 }
 
 /* Vertical Grid Lines */
@@ -1222,7 +1230,7 @@ td:last-child {
 /* ─── Node ID (号機) ─────────────────────────────────────────────────────── */
 .node-id-plain {
   font-family: 'Outfit', ui-monospace, monospace;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 900;
   color: rgba(255, 255, 255, 0.82);
   letter-spacing: 0.02em;
@@ -1243,6 +1251,11 @@ thead tr {
 
 thead th {
   min-height: 68px;
+  vertical-align: middle !important;
+}
+
+tbody td {
+  vertical-align: middle !important;
 }
 
 /* ─── Responsive ────────────────────────────────────────────────────────── */
@@ -1254,7 +1267,7 @@ thead th {
 
 /* ─── Ultra Rich Header (Final Refined) ─── */
 .th-label-rich {
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 950 !important;
   color: rgba(255, 255, 255, 0.5) !important;
   text-transform: uppercase;
@@ -1275,8 +1288,17 @@ thead th {
 /* ─── Sticky Table Header ─── */
 .sticky-table-header th {
   position: sticky !important;
-  top: 256px !important; /* filter-panel-sticky(124px) + height(約132px) */
-  z-index: 390; /* filter-panel-sticky(400) より下に配置 */
-  background: rgba(3, 7, 18, 0.98) !important;
+  top: 137px !important; /* フィルターパネルの高さ分だけ下に固定 */
+  z-index: 390;
+  background: #030712 !important; 
   backdrop-filter: blur(20px) saturate(180%);
+  vertical-align: middle !important;
+  padding-top: 10px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+/* 垂直中央揃えの徹底 */
+.ProjectRow td {
+  vertical-align: middle !important;
 }

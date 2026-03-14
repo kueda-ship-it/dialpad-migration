@@ -35,12 +35,12 @@ const ProjectRow = React.memo(({
 
     return (
         <tr className={`tr-hover-v13 ${rowClass}`}>
-            <td className="px-8 py-5 text-center border-b border-white/[0.025]">
+            <td className="px-4 py-4 text-center border-b border-white/[0.025] align-middle">
                 <input type="checkbox" className="checkbox-v5" checked={isSelected} onChange={() => toggleSelection(project.id)} />
             </td>
-            <td className="px-8 py-5 border-b border-white/[0.025]">
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span className="node-id-plain">{project.id}</span>
+            <td className="px-4 py-4 border-b border-white/[0.025] align-middle">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span className="text-[18px] font-bold node-id-v18">{project.id}</span>
                     <button
                         onClick={e => { e.stopPropagation(); copyToClipboard(project.id, 'id-' + project.id); }}
                         title="号機IDをコピー"
@@ -55,10 +55,10 @@ const ProjectRow = React.memo(({
                     </button>
                 </div>
             </td>
-            <td className="px-8 py-5 border-b border-white/[0.025]">
+            <td className="px-4 py-4 border-b border-white/[0.025] align-middle">
                 <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
                         <button
                             onClick={e => { e.stopPropagation(); copyToClipboard(project.name, 'name-' + project.id); }}
                             title="物件名をコピー"
@@ -73,17 +73,17 @@ const ProjectRow = React.memo(({
                         </button>
                     </div>
                     {project.address && (
-                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', fontWeight: 500 }}>{project.address}</div>
+                        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', fontWeight: 500 }}>{project.address}</div>
                     )}
                 </div>
             </td>
-            <td className="px-8 py-5 border-b border-white/[0.025] nowrap-v12 text-center">
-                <span style={{ fontSize: '11px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.7)' }}>{project.phone || '---'}</span>
+            <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
+                <span style={{ fontSize: '18px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
             </td>
-            <td className="px-8 py-5 border-b border-white/[0.025] nowrap-v12 text-center">
-                <span style={{ fontSize: '11px', fontWeight: 700, color: 'rgba(255,255,255,0.45)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
+            <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
+                <span style={{ fontSize: '18px', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
             </td>
-            <td className="px-8 py-5 border-b border-white/[0.025] text-center">
+            <td className="px-4 py-3 border-b border-white/[0.025] text-center align-middle">
                 <GlassDropdown 
                     value={project.status} 
                     onChange={(val) => updateProjectStatus(project.id, val)} 
@@ -93,17 +93,40 @@ const ProjectRow = React.memo(({
                     isWarning={project.status === '対応予定' && !project.support_date}
                 />
             </td>
-            <td className="p-5 border-b border-white/[0.02] text-center">
-                <div className="inline-flex items-center rounded-xl px-4 py-2.5 transition-all duration-300 group/date relative min-w-[145px] justify-center" style={{ background: STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)', border: `1px solid ${STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)'}` }}>
-                    <Calendar size={14} style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)', opacity: 0.6 }} className="mr-3" />
+            <td className="px-4 py-4 border-b border-white/[0.02] text-center align-middle">
+                <div 
+                    className={`inline-flex items-center rounded-xl px-4 py-3 transition-all duration-300 group/date relative min-w-[170px] justify-center ${!project.support_date ? 'opacity-0 hover:opacity-100' : ''}`} 
+                    style={{ 
+                        background: STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)', 
+                        border: `1px solid ${STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)'}` 
+                    }}
+                >
+                    <Calendar size={16} style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)', opacity: project.support_date ? 0.6 : 0.2 }} className="mr-3" />
                     {canInlineEdit ? (
-                        <input type="date" className="bg-transparent border-none text-[13px] font-black outline-none cursor-pointer [color-scheme:dark] date-input-v17" style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }} value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} onChange={(e) => handleSupportDateChange(project, e.target.value)} />
+                        <div className="flex items-center gap-2">
+                            <input 
+                                type="date" 
+                                className={`bg-transparent border-none text-[18px] font-black outline-none cursor-pointer [color-scheme:dark] date-input-v18 ${!project.support_date ? 'date-empty text-transparent' : ''}`} 
+                                style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }} 
+                                value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} 
+                                onChange={(e) => handleSupportDateChange(project, e.target.value)} 
+                            />
+                            {project.support_date && (
+                                <button 
+                                    onClick={(e) => { e.stopPropagation(); handleSupportDateChange(project, ''); }}
+                                    className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/40 hover:text-white"
+                                    title="日付を解除"
+                                >
+                                    <X size={14} />
+                                </button>
+                            )}
+                        </div>
                     ) : (
-                        <span className="text-[13px] font-black font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.3)' }}>{project.support_date || '----/--/--'}</span>
+                        <span className="text-[18px] font-black font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.1)' }}>{project.support_date ? project.support_date : ''}</span>
                     )}
                 </div>
             </td>
-            <td className="px-5 py-5 border-b border-white/[0.025]">
+            <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
                 <div className="flex justify-center">
                     <button
                         onClick={(e) => { e.stopPropagation(); !isViewOnly && toggleMasterUpdate(project.id); }}
@@ -129,7 +152,7 @@ const ProjectRow = React.memo(({
                     </button>
                 </div>
             </td>
-            <td className="px-5 py-5 border-b border-white/[0.025]">
+            <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
                 <div className="flex items-center justify-end gap-2">
                     <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openEditModal(project); }} disabled={isViewOnly}><Edit size={14} /></button>
                     <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openDetailModal(project); }}><Info size={14} /></button>
@@ -639,39 +662,35 @@ const ProjectList = () => {
                     <div className="glass-panel-v13 px-8 pb-8 pt-4">
                         <div>
                             <table className="w-full text-left border-separate border-spacing-0">
-                                <thead className="relative sticky-table-header">
-                                    <tr style={{ 
-                                        background: 'linear-gradient(to bottom, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)',
-                                        backdropFilter: 'blur(20px) saturate(180%)',
-                                        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 4px 15px rgba(0,0,0,0.15)'
-                                    }}>
-                                        <th className="px-8 py-9 w-16 text-center border-b border-white/[0.12]" style={{ verticalAlign: 'middle' }}>
+                                <thead className="sticky-table-header">
+                                    <tr>
+                                        <th className="px-4 py-10 w-16 text-center border-b border-white/[0.12] align-middle" style={{ verticalAlign: 'middle' }}>
                                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <Check size={18} className="text-white opacity-90" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
                                             </div>
                                         </th>
-                                        <th className="px-8 py-9 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('id')}>
+                                        <th className="px-4 py-10 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('id')}>
                                             <div className="flex items-center gap-2">号機 <SortIcon columnKey="id" sortConfig={sortConfig} /></div>
                                         </th>
-                                        <th className="px-8 py-9 border-b border-white/[0.08] cursor-pointer th-label-rich" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('name')}>
+                                        <th className="px-4 py-10 border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('name')}>
                                             物件名 <SortIcon columnKey="name" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-9 w-[180px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('phone')}>
+                                        <th className="px-4 py-10 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-9 w-[120px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-4 py-10 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-9 w-[165px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('status')}>
+                                        <th className="px-4 py-10 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('status')}>
                                             ステータス <SortIcon columnKey="status" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-9 w-[185px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center" style={{ verticalAlign: 'middle' }} onClick={() => handleSort('support_date')}>
+                                        <th className="px-4 py-10 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('support_date')}>
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-8 py-9 w-[116px] border-b border-white/[0.08] th-label-rich text-center" style={{ verticalAlign: 'middle' }}>
+                                        <th className="px-4 py-10 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }}>
                                             マスタ更新
                                         </th>
-                                        <th className="px-8 py-9 border-b border-white/[0.08]" style={{ verticalAlign: 'middle' }} />
+                                        <th className="px-4 py-8 border-b border-white/[0.08] align-middle" style={{ verticalAlign: 'middle' }} />
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-white/[0.01]">
@@ -894,7 +913,7 @@ const ProjectList = () => {
                                                     checked={newProject.master_update_done}
                                                     onChange={e => setNewProject({ ...newProject, master_update_done: e.target.checked })}
                                                 />
-                                                <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', fontWeight: 700 }}>
+                                                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontFamily: 'Outfit, sans-serif' }}>
                                                     {newProject.master_update_done ? '完了' : '未完了'}
                                                 </span>
                                             </div>
