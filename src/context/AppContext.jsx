@@ -429,6 +429,7 @@ export const AppProvider = ({ children }) => {
             loading,
             fetchProjects,
             selectedIds,
+            setSelectedIds,
             toggleSelection,
             clearSelection,
             updateProjectStatus,
