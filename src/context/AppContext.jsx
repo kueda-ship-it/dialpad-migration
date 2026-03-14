@@ -399,7 +399,10 @@ export const AppProvider = ({ children }) => {
     const clearSelection = () => setSelectedIds([]);
 
     // persist licenseCount to Supabase (debounced)
-    const updateLicenseCount = (newCount) => {
+    const updateLicenseCount = (newCountOrUpdater) => {
+        const newCount = typeof newCountOrUpdater === 'function'
+            ? newCountOrUpdater(licenseCount)
+            : newCountOrUpdater;
         setLicenseCount(newCount);
         localStorage.setItem('dm_license_count', newCount.toString());
 
