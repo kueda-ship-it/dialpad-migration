@@ -398,20 +398,22 @@ export const AppProvider = ({ children }) => {
 
     const clearSelection = () => setSelectedIds([]);
 
-    // persist licenseCount to Supabase (debounced)
-    const updateLicenseCount = (newCountOrUpdater) => {
-        const newCount = typeof newCountOrUpdater === 'function'
-            ? newCountOrUpdater(licenseCount)
-            : newCountOrUpdater;
-        setLicenseCount(newCount);
-        localStorage.setItem('dm_license_count', newCount.toString());
+    // persist licenseCount to localStorage + Supabase (debounced) whenever it changes
+    useEffect(() => {
+        if (licenseCount === null) return;
+        localStorage.setItem('dm_license_count', licenseCount.toString());
 
         if (licenseTimeoutRef.current) clearTimeout(licenseTimeoutRef.current);
         licenseTimeoutRef.current = setTimeout(async () => {
             await supabase
                 .from('system_settings')
-                .upsert({ key: 'license_pool', value: { total: newCount } }, { onConflict: 'key' });
-        }, 500); // 500ms 停止後に送信
+                .upsert({ key: 'license_pool', value: { total: licenseCount } }, { onConflict: 'key' });
+        }, 500);
+    }, [licenseCount]);
+
+    // pass functional updaters directly to React state so rapid long-press accumulates correctly
+    const updateLicenseCount = (newCountOrUpdater) => {
+        setLicenseCount(newCountOrUpdater);
     };
 
     const licenseRemaining = useMemo(() => {
