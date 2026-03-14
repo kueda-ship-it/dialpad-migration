@@ -40,7 +40,7 @@ const ProjectRow = React.memo(({
             </td>
             <td className="px-4 py-4 border-b border-white/[0.025] align-middle">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span className="text-[18px] font-bold node-id-v18">{project.id}</span>
+                    <span style={{ fontSize: '14px', fontWeight: 900, fontFamily: 'Outfit, monospace', color: 'rgba(255,255,255,0.9)' }}>{project.id}</span>
                     <button
                         onClick={e => { e.stopPropagation(); copyToClipboard(project.id, 'id-' + project.id); }}
                         title="号機IDをコピー"
@@ -58,7 +58,7 @@ const ProjectRow = React.memo(({
             <td className="px-4 py-4 border-b border-white/[0.025] align-middle">
                 <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
                         <button
                             onClick={e => { e.stopPropagation(); copyToClipboard(project.name, 'name-' + project.id); }}
                             title="物件名をコピー"
@@ -78,10 +78,10 @@ const ProjectRow = React.memo(({
                 </div>
             </td>
             <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
-                <span style={{ fontSize: '18px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
+                <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
             </td>
             <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
-                <span style={{ fontSize: '18px', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
+                <span style={{ fontSize: '15px', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] text-center align-middle">
                 <GlassDropdown 
@@ -95,34 +95,58 @@ const ProjectRow = React.memo(({
             </td>
             <td className="px-4 py-4 border-b border-white/[0.02] text-center align-middle">
                 <div 
-                    className={`inline-flex items-center rounded-xl px-4 py-3 transition-all duration-300 group/date relative min-w-[170px] justify-center ${!project.support_date ? 'opacity-0 hover:opacity-100' : ''}`} 
+                    className="flex items-center rounded-xl px-4 py-3 transition-all duration-300 group/date relative min-w-[170px] min-h-[44px] justify-center hover:border-white/20 overflow-hidden"
                     style={{ 
-                        background: STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)', 
-                        border: `1px solid ${STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)'}` 
+                        background: project.support_date ? (STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)') : 'rgba(255,255,255,0.01)', 
+                        border: `1px solid ${project.support_date ? (STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)') : 'rgba(255,255,255,0.05)'}`,
+                        cursor: 'pointer'
                     }}
                 >
-                    <Calendar size={16} style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)', opacity: project.support_date ? 0.6 : 0.2 }} className="mr-3" />
-                    {canInlineEdit ? (
-                        <div className="flex items-center gap-2">
-                            <input 
-                                type="date" 
-                                className={`bg-transparent border-none text-[18px] font-black outline-none cursor-pointer [color-scheme:dark] date-input-v18 ${!project.support_date ? 'date-empty text-transparent' : ''}`} 
-                                style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }} 
-                                value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} 
-                                onChange={(e) => handleSupportDateChange(project, e.target.value)} 
+                    {/* アイコンとテキストを包むレイヤー */}
+                    <div className="flex items-center justify-between gap-2 z-0 relative pointer-events-none w-full px-3">
+                        <div className="flex items-center gap-2 overflow-hidden">
+                            <Calendar 
+                                size={14} 
+                                style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)' }} 
+                                className={`flex-shrink-0 transition-opacity duration-300 ${project.support_date ? 'opacity-60' : 'opacity-20 group-hover/date:opacity-40'}`} 
                             />
                             {project.support_date && (
-                                <button 
-                                    onClick={(e) => { e.stopPropagation(); handleSupportDateChange(project, ''); }}
-                                    className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/40 hover:text-white"
-                                    title="日付を解除"
-                                >
-                                    <X size={14} />
-                                </button>
+                                <span className="text-[14px] font-bold truncate" style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }}>
+                                    {project.support_date.replace(/\//g, '-')}
+                                </span>
                             )}
                         </div>
-                    ) : (
-                        <span className="text-[18px] font-black font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.1)' }}>{project.support_date ? project.support_date : ''}</span>
+                        
+                        {canInlineEdit && project.support_date && (
+                            <button 
+                                type="button"
+                                onClick={(e) => { 
+                                    e.preventDefault();
+                                    e.stopPropagation(); 
+                                    handleSupportDateChange(project, ''); 
+                                }}
+                                className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/40 hover:text-white z-20 pointer-events-auto"
+                                title="日付を解除"
+                            >
+                                <X size={13} />
+                            </button>
+                        )}
+                    </div>
+
+                    {canInlineEdit && (
+                        <input 
+                            type="date" 
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [color-scheme:dark] z-10" 
+                            value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} 
+                            onChange={(e) => handleSupportDateChange(project, e.target.value)} 
+                            onClick={(e) => {
+                                try { e.target.showPicker(); } catch(err) {}
+                            }}
+                        />
+                    )}
+
+                    {!canInlineEdit && project.support_date && (
+                        <span className="text-[14px] font-bold font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.1)' }}>{project.support_date}</span>
                     )}
                 </div>
             </td>
@@ -669,25 +693,25 @@ const ProjectList = () => {
                                                 <Check size={18} className="text-white opacity-90" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
                                             </div>
                                         </th>
-                                        <th className="px-4 py-10 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('id')}>
+                                        <th className="px-4 py-6 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('id')}>
                                             <div className="flex items-center gap-2">号機 <SortIcon columnKey="id" sortConfig={sortConfig} /></div>
                                         </th>
-                                        <th className="px-4 py-10 border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('name')}>
+                                        <th className="px-4 py-6 border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('name')}>
                                             物件名 <SortIcon columnKey="name" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-10 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('phone')}>
+                                        <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-10 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-10 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('status')}>
+                                        <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('status')}>
                                             ステータス <SortIcon columnKey="status" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-10 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }} onClick={() => handleSort('support_date')}>
+                                        <th className="px-4 py-6 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('support_date')}>
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-10 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '18px' }}>
+                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }}>
                                             マスタ更新
                                         </th>
                                         <th className="px-4 py-8 border-b border-white/[0.08] align-middle" style={{ verticalAlign: 'middle' }} />
@@ -1131,7 +1155,7 @@ const ProjectList = () => {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div>
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>号機 / ID</label>
-                                            <p style={{ fontSize: '18px', fontWeight: 900, color: '#60a5fa', fontFamily: 'Outfit, monospace', marginTop: '6px' }}>{dp.id}</p>
+                                            <p style={{ fontSize: '14px', fontWeight: 900, color: '#60a5fa', fontFamily: 'Outfit, monospace', marginTop: '6px' }}>{dp.id}</p>
                                         </div>
                                         <div>
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>物件名</label>
