@@ -1079,47 +1079,81 @@ const ProjectList = () => {
                         </div>
                     </div>
                 </div>
-                <div className="px-8 mt-4 flex justify-end">
-                    <AnimatePresence>
-                        {selectedIds.length > 0 && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}
-                            >
-                                {['対応済', '対応予定', '未対応', 'リスケ'].map(status => {
-                                    const colors = { '対応済': '#10b981', '対応予定': '#f59e0b', '未対応': '#64748b', 'リスケ': '#ef4444' };
-                                    const c = colors[status];
-                                    return (
-                                        <button key={status} onClick={() => {
-                                            selectedIds.forEach(id => updateProjectStatus(id, status));
-                                            setSelectedIds([]);
-                                        }} style={{
-                                            padding: '8px 14px', borderRadius: '12px',
-                                            background: `rgba(${c === '#10b981' ? '16,185,129' : c === '#f59e0b' ? '245,158,11' : c === '#64748b' ? '100,116,139' : '239,68,68'},0.12)`,
-                                            border: `1px solid ${c}40`, color: c,
-                                            fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                                            letterSpacing: '0.05em',
-                                        }}>
-                                            {status}に変更
-                                        </button>
-                                    );
-                                })}
-                                <button onClick={() => setSelectedIds([])} style={{
-                                    padding: '8px 16px', borderRadius: '12px',
-                                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
-                                    color: '#f87171', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', gap: '6px',
-                                }}>
-                                    <span>{selectedIds.length}件</span>
-                                    <span>✕ 解除</span>
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
             </main>
+            {/* ─── Bulk Action Floating Bar (fixed bottom) ──────────── */}
+            {createPortal(
+                <AnimatePresence>
+                    {selectedIds.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 40 }}
+                            transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                            style={{
+                                position: 'fixed',
+                                bottom: '28px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                zIndex: 9999,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '12px 18px',
+                                borderRadius: '20px',
+                                background: 'rgba(15,23,42,0.92)',
+                                border: '1px solid rgba(139,92,246,0.35)',
+                                boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.15)',
+                                backdropFilter: 'blur(20px)',
+                                flexWrap: 'nowrap',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginRight: '4px' }}>
+                                {selectedIds.length}件選択中
+                            </span>
+                            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
+                            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>ステータス一括変更：</span>
+                            {['対応済', '対応予定', '未対応', 'リスケ'].map(status => {
+                                const colors = { '対応済': '#10b981', '対応予定': '#f59e0b', '未対応': '#94a3b8', 'リスケ': '#ef4444' };
+                                const rgbs = { '対応済': '16,185,129', '対応予定': '245,158,11', '未対応': '148,163,184', 'リスケ': '239,68,68' };
+                                const c = colors[status];
+                                const rgb = rgbs[status];
+                                return (
+                                    <button key={status} onClick={() => {
+                                        selectedIds.forEach(id => updateProjectStatus(id, status));
+                                        setSelectedIds([]);
+                                    }} style={{
+                                        padding: '7px 14px', borderRadius: '12px',
+                                        background: `rgba(${rgb},0.13)`,
+                                        border: `1px solid rgba(${rgb},0.35)`, color: c,
+                                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                        letterSpacing: '0.02em', transition: 'all 0.15s',
+                                    }}
+                                    onMouseOver={e => { e.currentTarget.style.background = `rgba(${rgb},0.25)`; }}
+                                    onMouseOut={e => { e.currentTarget.style.background = `rgba(${rgb},0.13)`; }}
+                                    >
+                                        {status}
+                                    </button>
+                                );
+                            })}
+                            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
+                            <button onClick={() => setSelectedIds([])} style={{
+                                padding: '7px 14px', borderRadius: '12px',
+                                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                                color: '#f87171', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '5px', transition: 'all 0.15s',
+                            }}
+                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.18)'; }}
+                            onMouseOut={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                            >
+                                <X size={13} />
+                                <span>解除</span>
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
             {/* ─── Pagination ──────────────────────────────────────── */}
             {(totalPages > 1 || isShowingAll || filteredProjects.length > PAGE_SIZE) && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.03)', marginTop: '10px' }}>

@@ -518,9 +518,9 @@ body {
   -webkit-appearance: none;
   width: 16px;
   height: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.28);
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.06);
   cursor: pointer;
   position: relative;
   transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
