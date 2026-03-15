@@ -288,6 +288,20 @@ export const AppProvider = ({ children }) => {
                 });
             }
 
+            // 3. 3日前リマインド
+            const threeDaysLater = new Date(today);
+            threeDaysLater.setDate(today.getDate() + 3);
+            if (sDate.getTime() === threeDaysLater.getTime() && p.status !== '対応済') {
+                newNotifications.push({
+                    id: `remind-3d-${p.id}`,
+                    type: 'info',
+                    title: '3日前リマインド',
+                    message: `${p.name} の対応日まで3日です。準備を確認してください。`,
+                    projectId: p.id,
+                    date: new Date()
+                });
+            }
+
             // 2. 7日未完了通知: 対応日から7日経過しても未完了
             const sevenDaysAgo = new Date(today);
             sevenDaysAgo.setDate(today.getDate() - 7);

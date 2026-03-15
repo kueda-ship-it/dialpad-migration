@@ -6,7 +6,7 @@ import {
     Search, Calendar, FileCheck,
     Check, Plus, X, ArrowUpDown, ArrowUp, ArrowDown, Edit, Info, ChevronDown, Trash2,
     MapPin, Hash, Cpu, CalendarDays, ShieldCheck, Settings2,
-    Copy, Download, Minus, ChevronLeft, ChevronRight
+    Copy, Download, Upload, Minus, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 /* ─── ステータスカラー定義（システム共通） ──────────────────────────────── */
@@ -111,7 +111,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
                         <button
                             key={ds}
                             type="button"
-                            onPointerDown={(e) => { e.stopPropagation(); onChange(ds); }}
+                            onPointerDown={(e) => { e.stopPropagation(); const clicked = new Date(ds); const todayDate = new Date(); todayDate.setHours(0,0,0,0); if (clicked < todayDate) { if (!window.confirm(`${ds} は過去の日付です。設定してよろしいですか？`)) return; } onChange(ds); }}
                             className="h-8 w-full flex items-center justify-center rounded-lg text-[12px] font-medium transition-all select-none"
                             style={{
                                 background: isSelected ? 'rgba(139,92,246,0.85)' : isToday ? 'rgba(139,92,246,0.18)' : 'transparent',
@@ -544,13 +544,14 @@ const inputStyle = {
 
 /* ─── ProjectList ───────────────────────────────────────────────────────── */
 const ProjectList = () => {
-    const { 
+    const {
         projects, setProjects,
-        updateProjectStatus: originalUpdateProjectStatus, 
-        updateProjectField, toggleMasterUpdate, 
+        updateProjectStatus: originalUpdateProjectStatus,
+        updateProjectField, toggleMasterUpdate,
         selectedIds, setSelectedIds, toggleSelection,
         licenseCount, licenseRemaining, setLicenseCount,
-        user
+        user,
+        addProject, updateProject, deleteProject,
     } = useApp();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -578,7 +579,9 @@ const ProjectList = () => {
     const canInlineEdit = !isViewOnly && !isEditor;
     const [statusFilter, setStatusFilter] = useState('すべて');
     const [masterFilter, setMasterFilter] = useState('すべて');
-    const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+    const [sortConfig, setSortConfig] = useState(() => {
+        try { const s = localStorage.getItem('dm_sort_config'); return s ? JSON.parse(s) : { key: 'id', direction: 'asc' }; } catch { return { key: 'id', direction: 'asc' }; }
+    });
 
     /* ─── Long Press Hook ── */
     const useLongPress = (callback, ms = 100) => {
@@ -642,6 +645,10 @@ const ProjectList = () => {
     const handleSort = (key) => {
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     };
+
+    useEffect(() => {
+        try { localStorage.setItem('dm_sort_config', JSON.stringify(sortConfig)); } catch {}
+    }, [sortConfig]);
 
     const sortedProjects = useMemo(() => {
         const list = [...projects];
@@ -721,6 +728,38 @@ const ProjectList = () => {
         a.click(); URL.revokeObjectURL(url);
     };
 
+    /* ─── CSV Import ── */
+    const importFileRef = useRef(null);
+    const handleImportCSV = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) { alert('データがありません'); return; }
+        let count = 0;
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            if (!cols[0]) continue;
+            const existing = projects.some(p => p.unit_id === cols[0] || p.id === cols[0]);
+            if (existing) continue;
+            await addProject({
+                unit_id: cols[0] || '',
+                name: cols[1] || '',
+                address: cols[2] || '',
+                phone: cols[3] || '',
+                status: ['対応済','対応予定','未対応','リスケ'].includes(cols[4]) ? cols[4] : '未対応',
+                maintenance_month: cols[5] || '',
+                support_date: cols[6] || '',
+                master_update_done: cols[7] === '完了' || cols[7] === 'true',
+                locker_type: cols[8] || '',
+                notes: cols[9] || '',
+            });
+            count++;
+        }
+        alert(`${count}件をインポートしました。`);
+        e.target.value = '';
+    };
+
     /* ─── Copy to clipboard ── */
     const [copiedId, setCopiedId] = useState(null);
     const copyToClipboard = (text, key) => {
@@ -740,6 +779,11 @@ const ProjectList = () => {
     /* ─── Handlers ── */
     const handleAddSubmit = (e) => {
         e.preventDefault();
+        const isDuplicate = projects.some(p => p.id === newProject.unit_id || p.unit_id === newProject.unit_id);
+        if (isDuplicate) {
+            alert(`号機ID「${newProject.unit_id}」は既に登録されています。`);
+            return;
+        }
         addProject(newProject);
         setIsAddModalOpen(false);
         setNewProject(emptyNew);
@@ -919,6 +963,24 @@ const ProjectList = () => {
                             <Download size={13} />
                             CSV
                         </button>
+                        {/* CSV取込 */}
+                        <input type="file" accept=".csv" ref={importFileRef} style={{ display: 'none' }} onChange={handleImportCSV} />
+                        <button
+                            onClick={() => importFileRef.current?.click()}
+                            title="CSV取込"
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 14px', borderRadius: '12px', cursor: 'pointer',
+                                background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)',
+                                color: '#60a5fa', fontSize: '11px', fontWeight: 800,
+                                letterSpacing: '0.06em', transition: 'all 0.2s', flexShrink: 0,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.15)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.07)'; }}
+                        >
+                            <Upload size={13} />
+                            CSV取込
+                        </button>
                         <div className="ml-auto flex items-center gap-4">
                             <button
                                 className="btn-add-rich-v10 group flex-shrink-0"
@@ -1020,25 +1082,40 @@ const ProjectList = () => {
                 <div className="px-8 mt-4 flex justify-end">
                     <AnimatePresence>
                         {selectedIds.length > 0 && (
-                            <motion.button
+                            <motion.div
                                 initial={{ opacity: 0, scale: 0.9, y: 10 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                onClick={() => setSelectedIds([])}
-                                className="active-click group flex items-center gap-2"
-                                style={{
-                                    padding: '10px 20px', borderRadius: '16px',
-                                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
-                                    color: '#f87171', fontSize: '11px', fontWeight: 900,
-                                    letterSpacing: '0.15em', textTransform: 'uppercase',
-                                    cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: '0 4px 20px rgba(239,68,68,0.15)',
-                                    backdropFilter: 'blur(10px)'
-                                }}
+                                style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}
                             >
-                                <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
-                                <span>{selectedIds.length}件を選択中 — 全解除</span>
-                            </motion.button>
+                                {['対応済', '対応予定', '未対応', 'リスケ'].map(status => {
+                                    const colors = { '対応済': '#10b981', '対応予定': '#f59e0b', '未対応': '#64748b', 'リスケ': '#ef4444' };
+                                    const c = colors[status];
+                                    return (
+                                        <button key={status} onClick={() => {
+                                            selectedIds.forEach(id => updateProjectStatus(id, status));
+                                            setSelectedIds([]);
+                                        }} style={{
+                                            padding: '8px 14px', borderRadius: '12px',
+                                            background: `rgba(${c === '#10b981' ? '16,185,129' : c === '#f59e0b' ? '245,158,11' : c === '#64748b' ? '100,116,139' : '239,68,68'},0.12)`,
+                                            border: `1px solid ${c}40`, color: c,
+                                            fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                                            letterSpacing: '0.05em',
+                                        }}>
+                                            {status}に変更
+                                        </button>
+                                    );
+                                })}
+                                <button onClick={() => setSelectedIds([])} style={{
+                                    padding: '8px 16px', borderRadius: '12px',
+                                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
+                                    color: '#f87171', fontSize: '11px', fontWeight: 800, cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                }}>
+                                    <span>{selectedIds.length}件</span>
+                                    <span>✕ 解除</span>
+                                </button>
+                            </motion.div>
                         )}
                     </AnimatePresence>
                 </div>
