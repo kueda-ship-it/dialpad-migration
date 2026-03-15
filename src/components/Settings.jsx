@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import {
     Settings as SettingsIcon, Bell, Mail, Send, LogOut,
     User, Shield, Check, Users, UserPlus, Trash2, Camera,
-    ChevronRight, ChevronDown, Globe, Lock
+    ChevronRight, ChevronDown, Globe, Lock, AlertTriangle, Clock, Info
 } from 'lucide-react';
 import './Settings.css';
 
@@ -368,18 +368,51 @@ const Settings = () => {
                                 <h2>通知インテグレーション</h2>
                             </div>
 
+                            {/* ── 通知トリガー説明 ── */}
+                            <div style={{ marginBottom: '20px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.06)' }}>
+                                <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <Info size={13} color="#60a5fa" />
+                                    <span style={{ fontSize: '11px', fontWeight: 800, color: 'rgba(255,255,255,0.6)', letterSpacing: '0.1em', textTransform: 'uppercase' }}>いつ・何が通知されるか</span>
+                                </div>
+                                <div style={{ padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                        <div style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: 'rgba(245,158,11,0.12)', border: '1px solid rgba(245,158,11,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <AlertTriangle size={14} color="#f59e0b" />
+                                        </div>
+                                        <div>
+                                            <p style={{ fontSize: '12px', fontWeight: 700, color: '#f59e0b', marginBottom: '2px' }}>マスタ未更新警告</p>
+                                            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                                                対応日の<strong style={{ color: 'rgba(255,255,255,0.6)' }}>前日</strong>になってもマスタ更新が未完了の号機を検出したとき。当日の作業準備を促す通知です。
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+                                        <div style={{ flexShrink: 0, width: 28, height: 28, borderRadius: 8, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Clock size={14} color="#f87171" />
+                                        </div>
+                                        <div>
+                                            <p style={{ fontSize: '12px', fontWeight: 700, color: '#f87171', marginBottom: '2px' }}>長期未完了アラート</p>
+                                            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: 1.5 }}>
+                                                対応日から<strong style={{ color: 'rgba(255,255,255,0.6)' }}>7日以上</strong>経過しても「対応済」になっていない号機を検出したとき。放置案件の早期対応を促します。
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div className="s-notification-grid">
                                 {/* Target Roles */}
                                 <div className="s-roles-panel">
                                     <h3 className="s-roles-title">
-                                        <Users size={14} color="#3b82f6" /> Target Roles
+                                        <Users size={14} color="#3b82f6" /> 通知対象ロール
                                     </h3>
+                                    <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.3)', marginBottom: '10px', lineHeight: 1.5 }}>選択したロールのユーザーが通知を受け取ります。</p>
                                     <div className="s-role-items">
                                         {[
-                                            { id: 'Admin', icon: <Shield size={18} />, color: '#ef4444' },
-                                            { id: 'Manager', icon: <Users size={18} />, color: '#8b5cf6' },
-                                            { id: 'Editor', icon: <User size={18} />, color: '#3b82f6' },
-                                            { id: 'View', icon: <Lock size={18} />, color: '#64748b' }
+                                            { id: 'Admin', icon: <Shield size={18} />, color: '#ef4444', desc: '全通知を受信' },
+                                            { id: 'Manager', icon: <Users size={18} />, color: '#8b5cf6', desc: 'アラート通知を受信' },
+                                            { id: 'Editor', icon: <User size={18} />, color: '#3b82f6', desc: '担当案件の通知のみ' },
+                                            { id: 'View', icon: <Lock size={18} />, color: '#64748b', desc: '通知なし（閲覧専用）' }
                                         ].map(role => {
                                             const isSelected = notificationSettings.targetUsers.includes(role.id);
                                             return (
@@ -392,9 +425,12 @@ const Settings = () => {
                                                         <span style={{ color: isSelected ? role.color : '#64748b' }}>
                                                             {role.icon}
                                                         </span>
-                                                        <span className={`s-role-item-name ${isSelected ? 'active' : 'inactive'}`}>
-                                                            {role.id}
-                                                        </span>
+                                                        <div>
+                                                            <span className={`s-role-item-name ${isSelected ? 'active' : 'inactive'}`}>
+                                                                {role.id}
+                                                            </span>
+                                                            <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.25)', margin: 0 }}>{role.desc}</p>
+                                                        </div>
                                                     </div>
                                                     <div className={`s-role-check ${isSelected ? 'checked' : ''}`}>
                                                         {isSelected && <Check size={12} color="#ffffff" />}
@@ -408,41 +444,86 @@ const Settings = () => {
                                 {/* Delivery Channels */}
                                 <div className="s-channels-col">
                                     <h3 className="s-roles-title">
-                                        <Globe size={14} color="#10b981" /> Delivery Channels
+                                        <Globe size={14} color="#10b981" /> 通知方法
                                     </h3>
-                                    <div className="s-channels-grid">
-                                        {[
-                                            { id: 'emailEnabled', label: 'Eメール送信', desc: '異常時・期限超過', icon: <Mail size={20} color="#8b5cf6" /> },
-                                            { id: 'pushEnabled', label: 'ブラウザ通知', desc: '即時アラート', icon: <Send size={20} color="#3b82f6" /> }
-                                        ].map(channel => (
-                                            <div key={channel.id} className="s-channel-card">
-                                                <div className="s-channel-top">
-                                                    <div className="s-channel-icon-box">
-                                                        {channel.icon}
-                                                    </div>
-                                                    <label className="switch">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={notificationSettings[channel.id]}
-                                                            onChange={e => setNotificationSettings({ ...notificationSettings, [channel.id]: e.target.checked })}
-                                                        />
-                                                        <span className="slider"></span>
-                                                    </label>
-                                                </div>
-                                                <div>
-                                                    <p className="s-channel-label">{channel.label}</p>
-                                                    <p className="s-channel-desc">{channel.desc}</p>
-                                                </div>
+
+                                    {/* ブラウザ通知 */}
+                                    <div className="s-channel-card" style={{ marginBottom: '10px' }}>
+                                        <div className="s-channel-top">
+                                            <div className="s-channel-icon-box">
+                                                <Send size={20} color="#3b82f6" />
                                             </div>
-                                        ))}
+                                            <label className="switch">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={notificationSettings.pushEnabled}
+                                                    onChange={async e => {
+                                                        const enabled = e.target.checked;
+                                                        if (enabled && typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
+                                                            const perm = await Notification.requestPermission();
+                                                            if (perm !== 'granted') return;
+                                                        }
+                                                        setNotificationSettings({ ...notificationSettings, pushEnabled: enabled });
+                                                    }}
+                                                />
+                                                <span className="slider"></span>
+                                            </label>
+                                        </div>
+                                        <div>
+                                            <p className="s-channel-label">ブラウザ通知</p>
+                                            <p className="s-channel-desc">OSのプッシュ通知としてデスクトップに表示。アプリを開いていなくても受信可能。</p>
+                                            {typeof Notification !== 'undefined' && Notification.permission === 'denied' && (
+                                                <p style={{ fontSize: '10px', color: '#f87171', marginTop: '6px' }}>
+                                                    ⚠ ブラウザの通知が「ブロック」になっています。ブラウザ設定から許可してください。
+                                                </p>
+                                            )}
+                                            {typeof Notification !== 'undefined' && Notification.permission === 'default' && (
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => { await Notification.requestPermission(); }}
+                                                    style={{ marginTop: '6px', fontSize: '10px', padding: '3px 10px', borderRadius: '6px', border: '1px solid rgba(59,130,246,0.4)', background: 'rgba(59,130,246,0.1)', color: '#60a5fa', cursor: 'pointer' }}
+                                                >
+                                                    通知を許可する
+                                                </button>
+                                            )}
+                                            {typeof Notification !== 'undefined' && Notification.permission === 'granted' && (
+                                                <p style={{ fontSize: '10px', color: '#10b981', marginTop: '4px' }}>✓ 通知が許可されています</p>
+                                            )}
+                                        </div>
                                     </div>
 
-                                    <div className="s-cloud-banner">
+                                    {/* メール通知 */}
+                                    <div className="s-channel-card">
+                                        <div className="s-channel-top">
+                                            <div className="s-channel-icon-box">
+                                                <Mail size={20} color="#8b5cf6" />
+                                            </div>
+                                            <label className="switch">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={notificationSettings.emailEnabled}
+                                                    onChange={e => setNotificationSettings({ ...notificationSettings, emailEnabled: e.target.checked })}
+                                                />
+                                                <span className="slider"></span>
+                                            </label>
+                                        </div>
+                                        <div>
+                                            <p className="s-channel-label">メール通知</p>
+                                            <p className="s-channel-desc">対象ロールのユーザーのメールアドレスに通知を送信。Supabase Edge Function の設定が必要です。</p>
+                                            {notificationSettings.emailEnabled && (
+                                                <p style={{ fontSize: '10px', color: 'rgba(245,158,11,0.8)', marginTop: '6px' }}>
+                                                    ⚠ メール送信にはSupabase Edge Functionの設定が必要です。
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="s-cloud-banner" style={{ marginTop: '10px' }}>
                                         <div className="s-cloud-header">
                                             <Check size={14} color="#3b82f6" />
-                                            <span className="s-cloud-label">Cloud Synced</span>
+                                            <span className="s-cloud-label">設定は自動保存されます</span>
                                         </div>
-                                        <p className="s-cloud-text">変更は全端末に即時同期されます。</p>
+                                        <p className="s-cloud-text">ブラウザのlocalStorageに保存されるため、次回ログイン時も維持されます。</p>
                                     </div>
                                 </div>
                             </div>

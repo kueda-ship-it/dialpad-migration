@@ -6,7 +6,7 @@ import {
     Search, Calendar, FileCheck,
     Check, Plus, X, ArrowUpDown, ArrowUp, ArrowDown, Edit, Info, ChevronDown, Trash2,
     MapPin, Hash, Cpu, CalendarDays, ShieldCheck, Settings2,
-    Copy, Download, Minus, ChevronLeft, ChevronRight
+    Copy, Download, Upload, Minus, ChevronLeft, ChevronRight
 } from 'lucide-react';
 
 /* ─── ステータスカラー定義（システム共通） ──────────────────────────────── */
@@ -15,6 +15,231 @@ const STATUS_COLORS = {
     '対応予定': { bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.38)', text: '#f59e0b', dot: 'rgba(245,158,11,0.9)' },
     '未対応': { bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.3)', text: '#94a3b8', dot: 'rgba(100,116,139,0.8)' },
     'リスケ': { bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.32)', text: '#f87171', dot: 'rgba(239,68,68,0.9)' },
+};
+
+/* ─── 日本の祝日判定 ──────────────────────────────────────────────────────── */
+const getJpHolidays = (year) => {
+    const h = new Set();
+    const add = (m, d) => h.add(`${year}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`);
+    // 春分・秋分 (近似計算)
+    const shunbun = Math.floor(20.8431 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    const shubun  = Math.floor(23.2488 + 0.242194 * (year - 1980) - Math.floor((year - 1980) / 4));
+    // 固定祝日
+    add(1,1); add(2,11); add(2,23); add(4,29); add(5,3); add(5,4); add(5,5);
+    add(8,11); add(11,3); add(11,23); add(3,shunbun); add(9,shubun);
+    // ハッピーマンデー
+    const nthMon = (m, n) => { const d = new Date(year,m-1,1); const diff=(1-d.getDay()+7)%7; return new Date(year,m-1,1+diff+(n-1)*7).getDate(); };
+    add(1, nthMon(1,2)); // 成人の日
+    add(7, nthMon(7,3)); // 海の日
+    add(9, nthMon(9,3)); // 敬老の日
+    add(10,nthMon(10,2));// 体育の日
+    // 振替休日：日曜祝日の翌月曜
+    const dates = [...h].map(s => new Date(s));
+    dates.forEach(d => {
+        if (d.getDay() === 0) {
+            const next = new Date(d); next.setDate(next.getDate()+1);
+            h.add(`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-${String(next.getDate()).padStart(2,'0')}`);
+        }
+    });
+    return h;
+};
+
+/* ─── MiniCalendar ────────────────────────────────────────────────────────── */
+const WEEK_DAYS = ['日', '月', '火', '水', '木', '金', '土'];
+
+const MiniCalendar = ({ value, onChange, onClear }) => {
+    const today = new Date();
+    const initDate = value ? new Date(value.replace(/\//g, '-')) : today;
+    const [viewYear, setViewYear] = useState(initDate.getFullYear());
+    const [viewMonth, setViewMonth] = useState(initDate.getMonth());
+
+    const selectedStr = value ? value.replace(/\//g, '-') : '';
+
+    const prevMonth = (e) => { e.stopPropagation(); setViewMonth(m => { if (m === 0) { setViewYear(y => y - 1); return 11; } return m - 1; }); };
+    const nextMonth = (e) => { e.stopPropagation(); setViewMonth(m => { if (m === 11) { setViewYear(y => y + 1); return 0; } return m + 1; }); };
+
+    // Build calendar grid
+    const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < firstDay; i++) cells.push(null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+    const toStr = (d) => `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const holidays = useMemo(() => getJpHolidays(viewYear), [viewYear]);
+
+    return (
+        <div style={{ width: 252 }} onMouseDown={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3 px-1">
+                <button type="button" onPointerDown={prevMonth}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white">
+                    <ChevronLeft size={14} />
+                </button>
+                <span className="text-[13px] font-bold text-white/90 tracking-wide select-none">
+                    {viewYear}年 {viewMonth + 1}月
+                </span>
+                <button type="button" onPointerDown={nextMonth}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white">
+                    <ChevronRight size={14} />
+                </button>
+            </div>
+
+            {/* Week labels */}
+            <div className="grid grid-cols-7 mb-1">
+                {WEEK_DAYS.map((w, i) => (
+                    <div key={w} className="text-center text-[11px] font-semibold py-1 select-none"
+                        style={{ color: i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : 'rgba(255,255,255,0.3)' }}>
+                        {w}
+                    </div>
+                ))}
+            </div>
+
+            {/* Days */}
+            <div className="grid grid-cols-7 gap-y-0.5">
+                {cells.map((d, idx) => {
+                    if (!d) return <div key={`e-${idx}`} />;
+                    const ds = toStr(d);
+                    const isSelected = ds === selectedStr;
+                    const isToday = ds === todayStr;
+                    const isSun = (idx % 7) === 0;
+                    const isSat = (idx % 7) === 6;
+                    const isHoliday = holidays.has(ds);
+                    const isRed = isSun || isHoliday;
+                    return (
+                        <button
+                            key={ds}
+                            type="button"
+                            onPointerDown={(e) => { e.stopPropagation(); const clicked = new Date(ds); const todayDate = new Date(); todayDate.setHours(0,0,0,0); if (clicked < todayDate) { if (!window.confirm(`${ds} は過去の日付です。設定してよろしいですか？`)) return; } onChange(ds); }}
+                            className="h-8 w-full flex items-center justify-center rounded-lg text-[12px] font-medium transition-all select-none"
+                            style={{
+                                background: isSelected ? 'rgba(139,92,246,0.85)' : isToday ? 'rgba(139,92,246,0.18)' : 'transparent',
+                                color: isSelected ? '#fff' : isToday ? '#a78bfa' : isRed ? '#f87171' : isSat ? '#60a5fa' : 'rgba(255,255,255,0.75)',
+                                fontWeight: isSelected || isToday ? 700 : 400,
+                                boxShadow: isSelected ? '0 0 10px rgba(139,92,246,0.5)' : 'none',
+                            }}
+                            onMouseOver={e => { if (!isSelected) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                            onMouseOut={e => { if (!isSelected) e.currentTarget.style.background = isToday ? 'rgba(139,92,246,0.18)' : 'transparent'; }}
+                        >
+                            {d}
+                        </button>
+                    );
+                })}
+            </div>
+
+            {/* Clear button */}
+            <div className="mt-3 pt-2.5" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <button
+                    type="button"
+                    onPointerDown={(e) => { e.stopPropagation(); onClear(); }}
+                    className="w-full py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                    style={{ color: selectedStr ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.2)', cursor: selectedStr ? 'pointer' : 'default', border: '1px solid transparent' }}
+                    disabled={!selectedStr}
+                    onMouseOver={e => { if (selectedStr) { e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.2)'; e.currentTarget.style.color = '#f87171'; } }}
+                    onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.color = selectedStr ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.2)'; }}
+                >
+                    日付をクリア
+                </button>
+            </div>
+        </div>
+    );
+};
+
+/* ─── InlineDatePicker ────────────────────────────────────────────────────── */
+const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
+    const [showPicker, setShowPicker] = useState(false);
+    const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
+    const btnRef = useRef(null);
+    const sc = STATUS_COLORS[project.status] || {};
+
+    const openPicker = () => {
+        if (!canInlineEdit) return;
+        const rect = btnRef.current.getBoundingClientRect();
+        // ポップアップが画面右端を超えないよう調整
+        const left = Math.min(rect.left, window.innerWidth - 280);
+        setPickerPos({ top: rect.bottom + 6, left });
+        setShowPicker(true);
+    };
+
+    const clearDate = () => {
+        onDateChange(project, '');
+        setShowPicker(false);
+    };
+
+    const handleXBtn = (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onDateChange(project, '');
+    };
+
+    useEffect(() => {
+        if (!showPicker) return;
+        const handler = () => setShowPicker(false);
+        document.addEventListener('mousedown', handler, true);
+        return () => document.removeEventListener('mousedown', handler, true);
+    }, [showPicker]);
+
+    return (
+        <>
+            <div
+                ref={btnRef}
+                className="flex items-center rounded-xl gap-2 transition-all h-[44px] border select-none"
+                style={{
+                    minWidth: 160,
+                    padding: '0 8px 0 12px',
+                    background: project.support_date ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${project.support_date ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)'}`,
+                    cursor: canInlineEdit ? 'pointer' : 'default',
+                }}
+                onClick={openPicker}
+            >
+                <Calendar
+                    size={14}
+                    style={{ color: sc.text || 'var(--primary)', opacity: project.support_date ? 0.65 : 0.25 }}
+                    className="flex-shrink-0"
+                />
+                <span className="text-[13px] font-bold flex-1 text-left truncate" style={{ color: sc.text || '#fff' }}>
+                    {project.support_date
+                        ? project.support_date.replace(/\//g, '-')
+                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '12px' }}>未設定</span>}
+                </span>
+                {canInlineEdit && project.support_date && (
+                    <button
+                        type="button"
+                        onPointerDown={handleXBtn}
+                        className="flex-shrink-0 flex items-center justify-center rounded-full transition-colors"
+                        style={{ width: 22, height: 22, color: 'rgba(255,255,255,0.35)', marginRight: 2 }}
+                        onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.color = 'rgba(255,255,255,0.8)'; }}
+                        onMouseOut={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; }}
+                        title="日付を解除"
+                    >
+                        <X size={11} />
+                    </button>
+                )}
+            </div>
+
+            {showPicker && canInlineEdit && createPortal(
+                <div
+                    className="fixed rounded-2xl border border-white/[0.1] shadow-2xl p-3"
+                    style={{
+                        top: pickerPos.top, left: pickerPos.left,
+                        background: 'linear-gradient(135deg, #1a2540 0%, #151e35 100%)',
+                        zIndex: 9999,
+                        boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                >
+                    <MiniCalendar
+                        value={project.support_date}
+                        onChange={(ds) => { onDateChange(project, ds); setShowPicker(false); }}
+                        onClear={clearDate}
+                    />
+                </div>,
+                document.body
+            )}
+        </>
+    );
 };
 
 /* ─── ProjectRow (Memoized) ──────────────────────────────────────────────── */
@@ -27,6 +252,22 @@ const ProjectRow = React.memo(({
     const rowClass =
         project.status === '対応済' ? 'row-completed' :
             project.status === '対応予定' ? 'row-planned' : '';
+
+    const [masterWarnPos, setMasterWarnPos] = useState(null);
+    const masterBtnRef = useRef(null);
+
+    const handleMasterClick = (e) => {
+        e.stopPropagation();
+        if (isViewOnly) return;
+        // 対応日未設定 & これからONにしようとしている場合は警告
+        if (!project.master_update_done && !project.support_date) {
+            const rect = masterBtnRef.current.getBoundingClientRect();
+            setMasterWarnPos({ top: rect.top - 8, left: rect.left + rect.width / 2 });
+            setTimeout(() => setMasterWarnPos(null), 2800);
+            return;
+        }
+        toggleMasterUpdate(project.id);
+    };
 
     const formatMaintenanceMonth = (month) => {
         if (!month) return '---';
@@ -80,8 +321,26 @@ const ProjectRow = React.memo(({
             <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
                 <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
             </td>
-            <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
-                <span style={{ fontSize: '15px', fontWeight: 700, color: 'rgba(255,255,255,0.6)' }}>{formatMaintenanceMonth(project.maintenance_month)}</span>
+            <td className="px-3 py-4 border-b border-white/[0.025] text-center align-middle">
+                {project.maintenance_month
+                    ? <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '3px', justifyContent: 'center', alignItems: 'center' }}>
+                        {project.maintenance_month.toString().split(',').map(m => m.trim()).filter(Boolean).map(m => (
+                            <span key={m} style={{
+                                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                minWidth: '26px', padding: '2px 4px', borderRadius: '5px',
+                                fontSize: '11px', fontWeight: 700, fontFamily: 'Outfit, monospace',
+                                background: 'rgba(255,255,255,0.05)',
+                                border: '1px solid rgba(255,255,255,0.08)',
+                                color: 'rgba(255,255,255,0.55)',
+                                letterSpacing: '0',
+                                flexShrink: 0,
+                            }}>
+                                {m}
+                            </span>
+                        ))}
+                    </div>
+                    : <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.2)' }}>---</span>
+                }
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] text-center align-middle">
                 <GlassDropdown 
@@ -94,75 +353,31 @@ const ProjectRow = React.memo(({
                 />
             </td>
             <td className="px-4 py-4 border-b border-white/[0.02] text-center align-middle">
-                <div 
-                    className="flex items-center rounded-xl px-4 py-3 transition-all duration-300 group/date relative min-w-[170px] min-h-[44px] justify-center hover:border-white/20 overflow-hidden"
-                    style={{ 
-                        background: project.support_date ? (STATUS_COLORS[project.status]?.bg || 'rgba(255,255,255,0.02)') : 'rgba(255,255,255,0.01)', 
-                        border: `1px solid ${project.support_date ? (STATUS_COLORS[project.status]?.border || 'rgba(255,255,255,0.05)') : 'rgba(255,255,255,0.05)'}`,
-                        cursor: 'pointer'
-                    }}
-                >
-                    {/* アイコンとテキストを包むレイヤー */}
-                    <div className="flex items-center justify-between gap-2 z-0 relative pointer-events-none w-full px-3">
-                        <div className="flex items-center gap-2 overflow-hidden">
-                            <Calendar 
-                                size={14} 
-                                style={{ color: STATUS_COLORS[project.status]?.text || 'var(--primary)' }} 
-                                className={`flex-shrink-0 transition-opacity duration-300 ${project.support_date ? 'opacity-60' : 'opacity-20 group-hover/date:opacity-40'}`} 
-                            />
-                            {project.support_date && (
-                                <span className="text-[14px] font-bold truncate" style={{ color: STATUS_COLORS[project.status]?.text || '#fff' }}>
-                                    {project.support_date.replace(/\//g, '-')}
-                                </span>
-                            )}
-                        </div>
-                        
-                        {canInlineEdit && project.support_date && (
-                            <button 
-                                type="button"
-                                onClick={(e) => { 
-                                    e.preventDefault();
-                                    e.stopPropagation(); 
-                                    handleSupportDateChange(project, ''); 
-                                }}
-                                className="p-1 hover:bg-white/20 rounded-full transition-colors text-white/40 hover:text-white z-20 pointer-events-auto"
-                                title="日付を解除"
-                            >
-                                <X size={13} />
-                            </button>
-                        )}
-                    </div>
-
-                    {canInlineEdit && (
-                        <input 
-                            type="date" 
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer [color-scheme:dark] z-10" 
-                            value={project.support_date ? project.support_date.replace(/\//g, '-') : ''} 
-                            onChange={(e) => handleSupportDateChange(project, e.target.value)} 
-                            onClick={(e) => {
-                                try { e.target.showPicker(); } catch(err) {}
-                            }}
-                        />
-                    )}
-
-                    {!canInlineEdit && project.support_date && (
-                        <span className="text-[14px] font-bold font-mono tracking-widest" style={{ color: STATUS_COLORS[project.status]?.text || 'rgba(255,255,255,0.1)' }}>{project.support_date}</span>
-                    )}
+                <div className="flex justify-center">
+                    <InlineDatePicker
+                        project={project}
+                        canInlineEdit={canInlineEdit}
+                        onDateChange={handleSupportDateChange}
+                    />
                 </div>
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
                 <div className="flex justify-center">
                     <button
-                        onClick={(e) => { e.stopPropagation(); !isViewOnly && toggleMasterUpdate(project.id); }}
+                        ref={masterBtnRef}
+                        onClick={handleMasterClick}
                         className={`btn-square-v9 flex items-center justify-center transition-all ${project.master_update_done
                             ? 'border-[#a855f7]/80 bg-[#a855f7]/05 text-[#a855f7] scale-105'
-                            : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
+                            : !project.support_date
+                                ? 'bg-white/5 text-white/10 border-white/5 border-dashed'
+                                : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
                         style={{
                             width: '42px', height: '42px', borderRadius: '12px',
                             filter: project.master_update_done ? 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.6))' : 'none',
                             boxShadow: project.master_update_done ? 'inset 0 0 10px rgba(168, 85, 247, 0.3)' : 'none'
                         }}
                         disabled={isViewOnly}
+                        title={!project.master_update_done && !project.support_date ? '対応日を設定してからマスタ更新してください' : undefined}
                     >
                         <FileCheck
                             size={17}
@@ -175,6 +390,44 @@ const ProjectRow = React.memo(({
                         />
                     </button>
                 </div>
+                {/* 警告ポップアップ */}
+                {masterWarnPos && createPortal(
+                    <div
+                        style={{
+                            position: 'fixed',
+                            top: masterWarnPos.top,
+                            left: masterWarnPos.left,
+                            transform: 'translate(-50%, -100%)',
+                            zIndex: 9999,
+                            background: 'linear-gradient(135deg, #1e1a2e, #1a1526)',
+                            border: '1px solid rgba(239,68,68,0.4)',
+                            borderRadius: '10px',
+                            padding: '8px 14px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.6), 0 0 0 1px rgba(239,68,68,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px',
+                            whiteSpace: 'nowrap',
+                            animation: 'fadeInUp 0.2s ease',
+                            pointerEvents: 'none',
+                        }}
+                    >
+                        <span style={{ fontSize: '14px' }}>⚠️</span>
+                        <div>
+                            <p style={{ fontSize: '12px', fontWeight: 700, color: '#f87171', margin: 0 }}>対応日が未設定です</p>
+                            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>先に対応日を入力してください</p>
+                        </div>
+                        {/* 吹き出し三角 */}
+                        <div style={{
+                            position: 'absolute', bottom: -6, left: '50%', transform: 'translateX(-50%)',
+                            width: 0, height: 0,
+                            borderLeft: '6px solid transparent',
+                            borderRight: '6px solid transparent',
+                            borderTop: '6px solid rgba(239,68,68,0.4)',
+                        }} />
+                    </div>,
+                    document.body
+                )}
             </td>
             <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
                 <div className="flex items-center justify-end gap-2">
@@ -291,13 +544,14 @@ const inputStyle = {
 
 /* ─── ProjectList ───────────────────────────────────────────────────────── */
 const ProjectList = () => {
-    const { 
+    const {
         projects, setProjects,
-        updateProjectStatus: originalUpdateProjectStatus, 
-        updateProjectField, toggleMasterUpdate, 
+        updateProjectStatus: originalUpdateProjectStatus,
+        updateProjectField, toggleMasterUpdate,
         selectedIds, setSelectedIds, toggleSelection,
         licenseCount, licenseRemaining, setLicenseCount,
-        user
+        user,
+        addProject, updateProject, deleteProject,
     } = useApp();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -325,7 +579,9 @@ const ProjectList = () => {
     const canInlineEdit = !isViewOnly && !isEditor;
     const [statusFilter, setStatusFilter] = useState('すべて');
     const [masterFilter, setMasterFilter] = useState('すべて');
-    const [sortConfig, setSortConfig] = useState({ key: 'id', direction: 'asc' });
+    const [sortConfig, setSortConfig] = useState(() => {
+        try { const s = localStorage.getItem('dm_sort_config'); return s ? JSON.parse(s) : { key: 'id', direction: 'asc' }; } catch { return { key: 'id', direction: 'asc' }; }
+    });
 
     /* ─── Long Press Hook ── */
     const useLongPress = (callback, ms = 100) => {
@@ -389,6 +645,10 @@ const ProjectList = () => {
     const handleSort = (key) => {
         setSortConfig(prev => ({ key, direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc' }));
     };
+
+    useEffect(() => {
+        try { localStorage.setItem('dm_sort_config', JSON.stringify(sortConfig)); } catch {}
+    }, [sortConfig]);
 
     const sortedProjects = useMemo(() => {
         const list = [...projects];
@@ -468,6 +728,38 @@ const ProjectList = () => {
         a.click(); URL.revokeObjectURL(url);
     };
 
+    /* ─── CSV Import ── */
+    const importFileRef = useRef(null);
+    const handleImportCSV = async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const text = await file.text();
+        const lines = text.split('\n').filter(l => l.trim());
+        if (lines.length < 2) { alert('データがありません'); return; }
+        let count = 0;
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+            if (!cols[0]) continue;
+            const existing = projects.some(p => p.unit_id === cols[0] || p.id === cols[0]);
+            if (existing) continue;
+            await addProject({
+                unit_id: cols[0] || '',
+                name: cols[1] || '',
+                address: cols[2] || '',
+                phone: cols[3] || '',
+                status: ['対応済','対応予定','未対応','リスケ'].includes(cols[4]) ? cols[4] : '未対応',
+                maintenance_month: cols[5] || '',
+                support_date: cols[6] || '',
+                master_update_done: cols[7] === '完了' || cols[7] === 'true',
+                locker_type: cols[8] || '',
+                notes: cols[9] || '',
+            });
+            count++;
+        }
+        alert(`${count}件をインポートしました。`);
+        e.target.value = '';
+    };
+
     /* ─── Copy to clipboard ── */
     const [copiedId, setCopiedId] = useState(null);
     const copyToClipboard = (text, key) => {
@@ -487,6 +779,11 @@ const ProjectList = () => {
     /* ─── Handlers ── */
     const handleAddSubmit = (e) => {
         e.preventDefault();
+        const isDuplicate = projects.some(p => p.id === newProject.unit_id || p.unit_id === newProject.unit_id);
+        if (isDuplicate) {
+            alert(`号機ID「${newProject.unit_id}」は既に登録されています。`);
+            return;
+        }
         addProject(newProject);
         setIsAddModalOpen(false);
         setNewProject(emptyNew);
@@ -666,6 +963,24 @@ const ProjectList = () => {
                             <Download size={13} />
                             CSV
                         </button>
+                        {/* CSV取込 */}
+                        <input type="file" accept=".csv" ref={importFileRef} style={{ display: 'none' }} onChange={handleImportCSV} />
+                        <button
+                            onClick={() => importFileRef.current?.click()}
+                            title="CSV取込"
+                            style={{
+                                display: 'flex', alignItems: 'center', gap: '6px',
+                                padding: '8px 14px', borderRadius: '12px', cursor: 'pointer',
+                                background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)',
+                                color: '#60a5fa', fontSize: '11px', fontWeight: 800,
+                                letterSpacing: '0.06em', transition: 'all 0.2s', flexShrink: 0,
+                            }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.15)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.07)'; }}
+                        >
+                            <Upload size={13} />
+                            CSV取込
+                        </button>
                         <div className="ml-auto flex items-center gap-4">
                             <button
                                 className="btn-add-rich-v10 group flex-shrink-0"
@@ -690,7 +1005,31 @@ const ProjectList = () => {
                                     <tr>
                                         <th className="px-4 py-10 w-16 text-center border-b border-white/[0.12] align-middle" style={{ verticalAlign: 'middle' }}>
                                             <div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Check size={18} className="text-white opacity-90" style={{ filter: 'drop-shadow(0 0 10px rgba(255,255,255,0.4))' }} />
+                                                <button
+                                                    type="button"
+                                                    title={selectedIds.length > 0 ? '全解除' : '全選択'}
+                                                    onClick={() => {
+                                                        if (selectedIds.length > 0) {
+                                                            setSelectedIds([]);
+                                                        } else {
+                                                            setSelectedIds(pagedProjects.map(p => p.id));
+                                                        }
+                                                    }}
+                                                    style={{
+                                                        width: 28, height: 28, borderRadius: 8,
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        border: `1px solid ${selectedIds.length > 0 ? 'rgba(239,68,68,0.5)' : 'rgba(255,255,255,0.2)'}`,
+                                                        background: selectedIds.length > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)',
+                                                        cursor: 'pointer', transition: 'all 0.2s',
+                                                    }}
+                                                    onMouseOver={e => { e.currentTarget.style.background = selectedIds.length > 0 ? 'rgba(239,68,68,0.22)' : 'rgba(255,255,255,0.12)'; }}
+                                                    onMouseOut={e => { e.currentTarget.style.background = selectedIds.length > 0 ? 'rgba(239,68,68,0.12)' : 'rgba(255,255,255,0.05)'; }}
+                                                >
+                                                    {selectedIds.length > 0
+                                                        ? <X size={14} style={{ color: '#f87171' }} />
+                                                        : <Check size={14} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                                                    }
+                                                </button>
                                             </div>
                                         </th>
                                         <th className="px-4 py-6 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('id')}>
@@ -702,7 +1041,7 @@ const ProjectList = () => {
                                         <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-4 py-6 w-[130px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
                                         <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('status')}>
@@ -740,32 +1079,81 @@ const ProjectList = () => {
                         </div>
                     </div>
                 </div>
-                <div className="px-8 mt-4 flex justify-end">
-                    <AnimatePresence>
-                        {selectedIds.length > 0 && (
-                            <motion.button
-                                initial={{ opacity: 0, scale: 0.9, y: 10 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                                onClick={() => setSelectedIds([])}
-                                className="active-click group flex items-center gap-2"
-                                style={{
-                                    padding: '10px 20px', borderRadius: '16px',
-                                    background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.25)',
-                                    color: '#f87171', fontSize: '11px', fontWeight: 900,
-                                    letterSpacing: '0.15em', textTransform: 'uppercase',
-                                    cursor: 'pointer', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: '0 4px 20px rgba(239,68,68,0.15)',
-                                    backdropFilter: 'blur(10px)'
-                                }}
-                            >
-                                <X size={14} className="group-hover:rotate-90 transition-transform duration-300" />
-                                <span>Clear Selection ({selectedIds.length})</span>
-                            </motion.button>
-                        )}
-                    </AnimatePresence>
-                </div>
             </main>
+            {/* ─── Bulk Action Floating Bar (fixed bottom) ──────────── */}
+            {createPortal(
+                <AnimatePresence>
+                    {selectedIds.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 40 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 40 }}
+                            transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                            style={{
+                                position: 'fixed',
+                                bottom: '28px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                zIndex: 9999,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '12px 18px',
+                                borderRadius: '20px',
+                                background: 'rgba(15,23,42,0.92)',
+                                border: '1px solid rgba(139,92,246,0.35)',
+                                boxShadow: '0 8px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(139,92,246,0.15)',
+                                backdropFilter: 'blur(20px)',
+                                flexWrap: 'nowrap',
+                                whiteSpace: 'nowrap',
+                            }}
+                        >
+                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginRight: '4px' }}>
+                                {selectedIds.length}件選択中
+                            </span>
+                            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
+                            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>ステータス一括変更：</span>
+                            {['対応済', '対応予定', '未対応', 'リスケ'].map(status => {
+                                const colors = { '対応済': '#10b981', '対応予定': '#f59e0b', '未対応': '#94a3b8', 'リスケ': '#ef4444' };
+                                const rgbs = { '対応済': '16,185,129', '対応予定': '245,158,11', '未対応': '148,163,184', 'リスケ': '239,68,68' };
+                                const c = colors[status];
+                                const rgb = rgbs[status];
+                                return (
+                                    <button key={status} onClick={() => {
+                                        selectedIds.forEach(id => updateProjectStatus(id, status));
+                                        setSelectedIds([]);
+                                    }} style={{
+                                        padding: '7px 14px', borderRadius: '12px',
+                                        background: `rgba(${rgb},0.13)`,
+                                        border: `1px solid rgba(${rgb},0.35)`, color: c,
+                                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                        letterSpacing: '0.02em', transition: 'all 0.15s',
+                                    }}
+                                    onMouseOver={e => { e.currentTarget.style.background = `rgba(${rgb},0.25)`; }}
+                                    onMouseOut={e => { e.currentTarget.style.background = `rgba(${rgb},0.13)`; }}
+                                    >
+                                        {status}
+                                    </button>
+                                );
+                            })}
+                            <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
+                            <button onClick={() => setSelectedIds([])} style={{
+                                padding: '7px 14px', borderRadius: '12px',
+                                background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                                color: '#f87171', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                display: 'flex', alignItems: 'center', gap: '5px', transition: 'all 0.15s',
+                            }}
+                            onMouseOver={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.18)'; }}
+                            onMouseOut={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.08)'; }}
+                            >
+                                <X size={13} />
+                                <span>解除</span>
+                            </button>
+                        </motion.div>
+                    )}
+                </AnimatePresence>,
+                document.body
+            )}
             {/* ─── Pagination ──────────────────────────────────────── */}
             {(totalPages > 1 || isShowingAll || filteredProjects.length > PAGE_SIZE) && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', padding: '20px 0', borderTop: '1px solid rgba(255,255,255,0.03)', marginTop: '10px' }}>
@@ -879,7 +1267,7 @@ const ProjectList = () => {
                                                 onChange={e => setNewProject({ ...newProject, phone: e.target.value })}
                                             />
                                         </Field>
-                                        <Field label="通信タイプ" required>
+                                        <Field label="タイプ" required>
                                             <input
                                                 type="text" required placeholder="例: Ethernet / H95"
                                                 style={inputStyle}
@@ -1034,7 +1422,7 @@ const ProjectList = () => {
                                         </div>
 
                                         <div className="grid grid-cols-3 gap-5">
-                                            <Field label="通信タイプ">
+                                            <Field label="タイプ">
                                                 <input
                                                     type="text"
                                                     style={inputStyle}
@@ -1189,7 +1577,7 @@ const ProjectList = () => {
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <Cpu size={13} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
                                                 <div>
-                                                    <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>通信タイプ</label>
+                                                    <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>タイプ</label>
                                                     <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '3px' }}>{dp.locker_type || '---'}</p>
                                                 </div>
                                             </div>

@@ -4,7 +4,7 @@ import {
     Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     PieChart, Pie, Cell, Line, ComposedChart
 } from 'recharts';
-import { CheckCircle, Clock, AlertCircle, Layers, BarChart2, TrendingUp, ChevronDown } from 'lucide-react';
+import { CheckCircle, Clock, AlertCircle, Layers, BarChart2, TrendingUp, ChevronDown, CalendarDays } from 'lucide-react';
 
 /* ─── システムカラー定義（全体共通） ─────────────────────────────────────── */
 // eslint-disable-next-line react-refresh/only-export-components
@@ -40,12 +40,18 @@ const Dashboard = () => {
         return ['all', ...Array.from(years).sort((a, b) => a - b)];
     }, [projects]);
 
+    const currentMonth = new Date().getMonth() + 1;
+
     const stats = useMemo(() => ({
         total:      projects.length,
         completed:  projects.filter(p => p.status === '対応済').length,
         inProgress: projects.filter(p => p.status === '対応予定').length,
         pending:    projects.filter(p => p.status === '未対応').length,
-    }), [projects]);
+        monthMaintenance: projects.filter(p => {
+            if (!p.maintenance_month) return false;
+            return p.maintenance_month.toString().split(',').map(m => parseInt(m.trim(), 10)).includes(currentMonth);
+        }).length,
+    }), [projects, currentMonth]);
 
     const monthlyData = useMemo(() => {
         if (selectedYear !== 'all') {
@@ -98,12 +104,13 @@ const Dashboard = () => {
         { label: '対応完了', sub: `${completionRate}% 達成`, value: stats.completed,  color: STATUS_COLORS.done,     icon: CheckCircle, glow: 'rgba(16,185,129,0.35)',   accent: 'rgba(16,185,129,0.1)'   },
         { label: '対応予定', sub: '予定あり',   value: stats.inProgress, color: STATUS_COLORS.planned,  icon: Clock,       glow: 'rgba(245,158,11,0.3)',    accent: 'rgba(245,158,11,0.1)'   },
         { label: '未対応',   sub: '要対応',     value: stats.pending,    color: STATUS_COLORS.pending,  icon: AlertCircle, glow: 'rgba(100,116,139,0.25)',  accent: 'rgba(100,116,139,0.08)' },
+        { label: '今月メンテ', sub: `${currentMonth}月 対応`, value: stats.monthMaintenance, color: '#8b5cf6', icon: CalendarDays, glow: 'rgba(139,92,246,0.3)', accent: 'rgba(139,92,246,0.1)' },
     ];
 
     return (
-        <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '56px' }}>
+        <div className="w-full" style={{ display: 'flex', flexDirection: 'column', gap: '56px', paddingTop: '48px' }}>
             {/* Stat Cards ──────────────────────────────────────────── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '48px' }}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)', paddingBottom: '48px' }}>
                 {statCards.map((item, idx) => (
                     <div key={idx} className="stat-card" style={{ padding: '1.75rem', border: `1px solid ${item.color}25`, boxShadow: `0 0 0 1px rgba(255,255,255,0.03), 0 8px 32px rgba(0,0,0,0.35), 0 0 40px ${item.glow}` }}>
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px' }}>
