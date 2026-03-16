@@ -126,7 +126,7 @@ const ActiveUsers = () => {
                         exit={{ opacity: 0, scale: 0.8, x: 10 }}
                         className="relative group"
                     >
-                        <div className="w-10 h-10 rounded-xl p-[1px] bg-gradient-to-br from-white/20 to-transparent border border-white/10 shadow-lg overflow-hidden backdrop-blur-md">
+                        <div className="w-8 h-8 rounded-xl p-[1px] bg-gradient-to-br from-white/20 to-transparent border border-white/10 shadow-lg overflow-hidden backdrop-blur-md">
                             {u.avatar_url ? (
                                 <img src={u.avatar_url} alt={u.full_name} className="w-full h-full object-cover rounded-[10px]" />
                             ) : (
@@ -135,7 +135,7 @@ const ActiveUsers = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-[#030712] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                        <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 border-2 border-[#030712] rounded-full shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
                         
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-black/80 backdrop-blur-md border border-white/10 rounded-md text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[1000]">
                             {u.full_name}
@@ -144,7 +144,7 @@ const ActiveUsers = () => {
                 ))}
             </AnimatePresence>
             {activeUsers.length > 5 && (
-                <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 backdrop-blur-md">
+                <div className="w-8 h-8 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black text-white/40 backdrop-blur-md">
                     +{activeUsers.length - 5}
                 </div>
             )}
