@@ -77,7 +77,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
                     className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors text-white/50 hover:text-white">
                     <ChevronLeft size={14} />
                 </button>
-                <span className="text-[13px] font-bold text-white/90 tracking-wide select-none">
+                <span className="text-[12px] font-bold text-white/90 tracking-wide select-none">
                     {viewYear}年 {viewMonth + 1}月
                 </span>
                 <button type="button" onPointerDown={nextMonth}
@@ -89,7 +89,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
             {/* Week labels */}
             <div className="grid grid-cols-7 mb-1">
                 {WEEK_DAYS.map((w, i) => (
-                    <div key={w} className="text-center text-[11px] font-semibold py-1 select-none"
+                    <div key={w} className="text-center text-[12px] font-semibold py-1 select-none"
                         style={{ color: i === 0 ? '#f87171' : i === 6 ? '#60a5fa' : 'rgba(255,255,255,0.3)' }}>
                         {w}
                     </div>
@@ -112,7 +112,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
                             key={ds}
                             type="button"
                             onPointerDown={(e) => { e.stopPropagation(); const clicked = new Date(ds); const todayDate = new Date(); todayDate.setHours(0,0,0,0); if (clicked < todayDate) { if (!window.confirm(`${ds} は過去の日付です。設定してよろしいですか？`)) return; } onChange(ds); }}
-                            className="h-8 w-full flex items-center justify-center rounded-lg text-[12px] font-medium transition-all select-none"
+                            className="h-8 w-full flex items-center justify-center rounded-lg text-[13px] font-medium transition-all select-none"
                             style={{
                                 background: isSelected ? 'rgba(139,92,246,0.85)' : isToday ? 'rgba(139,92,246,0.18)' : 'transparent',
                                 color: isSelected ? '#fff' : isToday ? '#a78bfa' : isRed ? '#f87171' : isSat ? '#60a5fa' : 'rgba(255,255,255,0.75)',
@@ -133,7 +133,7 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
                 <button
                     type="button"
                     onPointerDown={(e) => { e.stopPropagation(); onClear(); }}
-                    className="w-full py-1.5 rounded-lg text-[12px] font-medium transition-all"
+                    className="w-full py-1.5 rounded-lg text-[13px] font-medium transition-all"
                     style={{ color: selectedStr ? 'rgba(248,113,113,0.75)' : 'rgba(255,255,255,0.2)', cursor: selectedStr ? 'pointer' : 'default', border: '1px solid transparent' }}
                     disabled={!selectedStr}
                     onMouseOver={e => { if (selectedStr) { e.currentTarget.style.background = 'rgba(248,113,113,0.1)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.2)'; e.currentTarget.style.color = '#f87171'; } }}
@@ -173,9 +173,14 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
         onDateChange(project, '');
     };
 
+    const pickerRef = useRef(null);
+
     useEffect(() => {
         if (!showPicker) return;
-        const handler = () => setShowPicker(false);
+        const handler = (e) => {
+            if (pickerRef.current && pickerRef.current.contains(e.target)) return;
+            setShowPicker(false);
+        };
         document.addEventListener('mousedown', handler, true);
         return () => document.removeEventListener('mousedown', handler, true);
     }, [showPicker]);
@@ -184,7 +189,7 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
         <>
             <div
                 ref={btnRef}
-                className="flex items-center rounded-xl gap-2 transition-all h-[44px] border select-none"
+                className="flex items-center rounded-xl gap-2 transition-all h-[38px] border select-none"
                 style={{
                     minWidth: 160,
                     padding: '0 8px 0 12px',
@@ -199,10 +204,10 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
                     style={{ color: sc.text || 'var(--primary)', opacity: project.support_date ? 0.65 : 0.25 }}
                     className="flex-shrink-0"
                 />
-                <span className="text-[13px] font-bold flex-1 text-left truncate" style={{ color: sc.text || '#fff' }}>
+                <span className="text-[12px] font-bold flex-1 text-left truncate" style={{ color: sc.text || '#fff' }}>
                     {project.support_date
                         ? project.support_date.replace(/\//g, '-')
-                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '12px' }}>未設定</span>}
+                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '13px' }}>未設定</span>}
                 </span>
                 {canInlineEdit && project.support_date && (
                     <button
@@ -221,6 +226,7 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
 
             {showPicker && canInlineEdit && createPortal(
                 <div
+                    ref={pickerRef}
                     className="fixed rounded-2xl border border-white/[0.1] shadow-2xl p-3"
                     style={{
                         top: pickerPos.top, left: pickerPos.left,
@@ -276,12 +282,12 @@ const ProjectRow = React.memo(({
 
     return (
         <tr className={`tr-hover-v13 ${rowClass}`}>
-            <td className="px-4 py-4 text-center border-b border-white/[0.025] align-middle">
+            <td className="px-4 py-0.5 text-center align-middle">
                 <input type="checkbox" className="checkbox-v5" checked={isSelected} onChange={() => toggleSelection(project.id)} />
             </td>
-            <td className="px-4 py-4 border-b border-white/[0.025] align-middle">
+            <td className="px-4 py-0.5 align-middle">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '14px', fontWeight: 900, fontFamily: 'Outfit, monospace', color: 'rgba(255,255,255,0.9)' }}>{project.id}</span>
+                    <span style={{ fontSize: '13px', fontWeight: 900, fontFamily: 'Outfit, monospace', color: 'rgba(255,255,255,0.9)' }}>{project.id}</span>
                     <button
                         onClick={e => { e.stopPropagation(); copyToClipboard(project.id, 'id-' + project.id); }}
                         title="号機IDをコピー"
@@ -296,10 +302,10 @@ const ProjectRow = React.memo(({
                     </button>
                 </div>
             </td>
-            <td className="px-4 py-4 border-b border-white/[0.025] align-middle">
-                <div>
+            <td className="px-4 py-0.5 align-middle">
+                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
+                        <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
                         <button
                             onClick={e => { e.stopPropagation(); copyToClipboard(project.name, 'name-' + project.id); }}
                             title="物件名をコピー"
@@ -314,21 +320,21 @@ const ProjectRow = React.memo(({
                         </button>
                     </div>
                     {project.address && (
-                        <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', fontWeight: 500 }}>{project.address}</div>
+                        <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.3)', marginTop: '4px', fontWeight: 500 }}>{project.address}</div>
                     )}
                 </div>
             </td>
-            <td className="px-4 py-4 border-b border-white/[0.025] nowrap-v12 text-center align-middle">
-                <span style={{ fontSize: '15px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
+            <td className="px-4 py-0.5 nowrap-v12 text-center align-middle">
+                <span style={{ fontSize: '12px', fontWeight: 800, fontFamily: 'Outfit, monospace', letterSpacing: '0.1em', color: 'rgba(0,242,255,0.85)' }}>{project.phone || '---'}</span>
             </td>
-            <td className="px-3 py-4 border-b border-white/[0.025] text-center align-middle">
+            <td className="px-3 py-0.5 text-center align-middle">
                 {project.maintenance_month
                     ? <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '3px', justifyContent: 'center', alignItems: 'center' }}>
                         {project.maintenance_month.toString().split(',').map(m => m.trim()).filter(Boolean).map(m => (
                             <span key={m} style={{
                                 display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                                 minWidth: '26px', padding: '2px 4px', borderRadius: '5px',
-                                fontSize: '11px', fontWeight: 700, fontFamily: 'Outfit, monospace',
+                                fontSize: '12px', fontWeight: 700, fontFamily: 'Outfit, monospace',
                                 background: 'rgba(255,255,255,0.05)',
                                 border: '1px solid rgba(255,255,255,0.08)',
                                 color: 'rgba(255,255,255,0.55)',
@@ -339,10 +345,10 @@ const ProjectRow = React.memo(({
                             </span>
                         ))}
                     </div>
-                    : <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.2)' }}>---</span>
+                    : <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.2)' }}>---</span>
                 }
             </td>
-            <td className="px-4 py-3 border-b border-white/[0.025] text-center align-middle">
+            <td className="px-4 py-0.5 text-center align-middle">
                 <GlassDropdown 
                     value={project.status} 
                     onChange={(val) => updateProjectStatus(project.id, val)} 
@@ -352,7 +358,7 @@ const ProjectRow = React.memo(({
                     isWarning={project.status === '対応予定' && !project.support_date}
                 />
             </td>
-            <td className="px-4 py-4 border-b border-white/[0.02] text-center align-middle">
+            <td className="px-4 py-0.5 text-center align-middle">
                 <div className="flex justify-center">
                     <InlineDatePicker
                         project={project}
@@ -361,7 +367,7 @@ const ProjectRow = React.memo(({
                     />
                 </div>
             </td>
-            <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
+            <td className="px-4 py-0.5 align-middle">
                 <div className="flex justify-center">
                     <button
                         ref={masterBtnRef}
@@ -372,7 +378,7 @@ const ProjectRow = React.memo(({
                                 ? 'bg-white/5 text-white/10 border-white/5 border-dashed'
                                 : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
                         style={{
-                            width: '42px', height: '42px', borderRadius: '12px',
+                            width: '38px', height: '38px', borderRadius: '10px',
                             filter: project.master_update_done ? 'drop-shadow(0 0 5px rgba(168, 85, 247, 0.6))' : 'none',
                             boxShadow: project.master_update_done ? 'inset 0 0 10px rgba(168, 85, 247, 0.3)' : 'none'
                         }}
@@ -412,10 +418,10 @@ const ProjectRow = React.memo(({
                             pointerEvents: 'none',
                         }}
                     >
-                        <span style={{ fontSize: '14px' }}>⚠️</span>
+                        <span style={{ fontSize: '13px' }}>⚠️</span>
                         <div>
-                            <p style={{ fontSize: '12px', fontWeight: 700, color: '#f87171', margin: 0 }}>対応日が未設定です</p>
-                            <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>先に対応日を入力してください</p>
+                            <p style={{ fontSize: '13px', fontWeight: 700, color: '#f87171', margin: 0 }}>対応日が未設定です</p>
+                            <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', margin: 0 }}>先に対応日を入力してください</p>
                         </div>
                         {/* 吹き出し三角 */}
                         <div style={{
@@ -429,7 +435,7 @@ const ProjectRow = React.memo(({
                     document.body
                 )}
             </td>
-            <td className="px-4 py-3 border-b border-white/[0.025] align-middle">
+            <td className="px-4 py-0.5 align-middle">
                 <div className="flex items-center justify-end gap-2">
                     <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openEditModal(project); }} disabled={isViewOnly}><Edit size={14} /></button>
                     <button className="btn-square-v9 flex items-center justify-center bg-white/5 hover:bg-white/10 text-white/60 transition-colors" style={{ width: '38px', height: '38px', borderRadius: '10px' }} onClick={(e) => { e.stopPropagation(); openDetailModal(project); }}><Info size={14} /></button>
@@ -537,7 +543,7 @@ const Field = ({ label, required, children }) => (
 
 const inputStyle = {
     width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '12px', padding: '12px 16px', fontSize: '13px', color: '#fff',
+    borderRadius: '13px', padding: '12px 16px', fontSize: '12px', color: '#fff',
     outline: 'none', fontFamily: 'Outfit, sans-serif', fontWeight: 600,
     transition: 'border-color 0.2s',
 };
@@ -846,7 +852,7 @@ const ProjectList = () => {
 
             {/* ─── Filter Panel (Sticky beneath Global Header) ────────── */}
             <div className="filter-panel-sticky">
-                <div className="glass-panel p-5">
+                <div className="p-5">
                     <div className="flex flex-wrap items-center gap-4">
                         {/* 検索 */}
                         <div className="flex-[1.5] search-container-v7 min-w-[180px]">
@@ -867,8 +873,7 @@ const ProjectList = () => {
                         </div>
 
                         {/* Result Count Badge - Refined Design */}
-                        <div className="flex items-center gap-3 px-4 py-2 rounded-2xl bg-white/[0.03] border border-white/[0.08] flex-shrink-0 relative group/match min-w-[170px]"
-                             style={{ boxShadow: '0 4px 20px -5px rgba(59,130,246,0.1), inset 0 0 15px rgba(255,255,255,0.01)' }}>
+                        <div className="flex items-center gap-3 px-4 py-2 rounded-2xl flex-shrink-0 relative group/match min-w-[170px]">
                             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-purple-500/5 opacity-0 group-hover/match:opacity-100 transition-opacity duration-700 rounded-2xl" />
                             <div className="flex flex-col items-start leading-none relative z-10">
                                 <div className="flex items-center gap-1.5 mb-1.5 px-0.5">
@@ -877,7 +882,7 @@ const ProjectList = () => {
                                     <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.1em] whitespace-nowrap">RESULTS</span>
                                 </div>
                                 <div className="flex items-baseline gap-1.5 ml-0.5">
-                                    <span className="text-[20px] font-black text-blue-400 font-mono tracking-tighter" style={{ textShadow: '0 0 12px rgba(96,165,250,0.3)' }}>{filteredProjects.length}</span>
+                                    <span className="text-[18px] font-black text-blue-400 font-mono tracking-tighter" style={{ textShadow: '0 0 12px rgba(96,165,250,0.3)' }}>{filteredProjects.length}</span>
                                     <span className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Nodes</span>
                                 </div>
                             </div>
@@ -893,7 +898,7 @@ const ProjectList = () => {
                                 background: licenseRemaining !== null && licenseRemaining <= 10
                                     ? 'rgba(239,68,68,0.08)' : 'rgba(59,130,246,0.06)',
                                 border: `1px solid ${licenseRemaining !== null && licenseRemaining <= 10 ? 'rgba(239,68,68,0.25)' : 'rgba(59,130,246,0.15)'}`,
-                                borderRadius: '14px', padding: '5px 10px 5px 12px', flexShrink: 0,
+                                borderRadius: '13px', padding: '5px 10px 5px 12px', flexShrink: 0,
                                 backdropFilter: 'blur(8px)',
                             }}>
                                 <ShieldCheck size={13} style={{ color: licenseRemaining !== null && licenseRemaining <= 10 ? '#f87171' : '#60a5fa', flexShrink: 0 }} />
@@ -918,7 +923,7 @@ const ProjectList = () => {
                                         }
                                     }}
                                     style={{
-                                        minWidth: '36px', textAlign: 'center', fontSize: '14px', fontWeight: 900,
+                                        minWidth: '36px', textAlign: 'center', fontSize: '13px', fontWeight: 900,
                                         fontFamily: 'Outfit, monospace', letterSpacing: '0.05em',
                                         color: licenseRemaining !== null && licenseRemaining <= 10 ? '#f87171' : '#60a5fa',
                                         lineHeight: 1,
@@ -952,9 +957,9 @@ const ProjectList = () => {
                             title="CSV出力"
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '8px 14px', borderRadius: '12px', cursor: 'pointer',
+                                padding: '8px 14px', borderRadius: '13px', cursor: 'pointer',
                                 background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)',
-                                color: '#10b981', fontSize: '11px', fontWeight: 800,
+                                color: '#10b981', fontSize: '12px', fontWeight: 800,
                                 letterSpacing: '0.06em', transition: 'all 0.2s', flexShrink: 0,
                             }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.15)'; }}
@@ -970,9 +975,9 @@ const ProjectList = () => {
                             title="CSV取込"
                             style={{
                                 display: 'flex', alignItems: 'center', gap: '6px',
-                                padding: '8px 14px', borderRadius: '12px', cursor: 'pointer',
+                                padding: '8px 14px', borderRadius: '13px', cursor: 'pointer',
                                 background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.2)',
-                                color: '#60a5fa', fontSize: '11px', fontWeight: 800,
+                                color: '#60a5fa', fontSize: '12px', fontWeight: 800,
                                 letterSpacing: '0.06em', transition: 'all 0.2s', flexShrink: 0,
                             }}
                             onMouseEnter={e => { e.currentTarget.style.background = 'rgba(59,130,246,0.15)'; }}
@@ -1032,25 +1037,25 @@ const ProjectList = () => {
                                                 </button>
                                             </div>
                                         </th>
-                                        <th className="px-4 py-6 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('id')}>
+                                        <th className="px-4 py-6 w-[80px] border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('id')}>
                                             <div className="flex items-center gap-2">号機 <SortIcon columnKey="id" sortConfig={sortConfig} /></div>
                                         </th>
-                                        <th className="px-4 py-6 border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('name')}>
+                                        <th className="px-4 py-6 border-b border-white/[0.08] cursor-pointer th-label-rich align-middle text-left" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('name')}>
                                             物件名 <SortIcon columnKey="name" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('phone')}>
+                                        <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('phone')}>
                                             電話番号 <SortIcon columnKey="phone" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[130px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('maintenance_month')}>
+                                        <th className="px-4 py-6 w-[130px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('maintenance_month')}>
                                             メンテ月 <SortIcon columnKey="maintenance_month" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('status')}>
+                                        <th className="px-4 py-6 w-[150px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('status')}>
                                             ステータス <SortIcon columnKey="status" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }} onClick={() => handleSort('support_date')}>
+                                        <th className="px-4 py-6 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('support_date')}>
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
-                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '14px' }}>
+                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }}>
                                             マスタ更新
                                         </th>
                                         <th className="px-4 py-8 border-b border-white/[0.08] align-middle" style={{ verticalAlign: 'middle' }} />
@@ -1108,11 +1113,11 @@ const ProjectList = () => {
                                 whiteSpace: 'nowrap',
                             }}
                         >
-                            <span style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginRight: '4px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.5)', marginRight: '4px' }}>
                                 {selectedIds.length}件選択中
                             </span>
                             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
-                            <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>ステータス一括変更：</span>
+                            <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>ステータス一括変更：</span>
                             {['対応済', '対応予定', '未対応', 'リスケ'].map(status => {
                                 const colors = { '対応済': '#10b981', '対応予定': '#f59e0b', '未対応': '#94a3b8', 'リスケ': '#ef4444' };
                                 const rgbs = { '対応済': '16,185,129', '対応予定': '245,158,11', '未対応': '148,163,184', 'リスケ': '239,68,68' };
@@ -1123,10 +1128,10 @@ const ProjectList = () => {
                                         selectedIds.forEach(id => updateProjectStatus(id, status));
                                         setSelectedIds([]);
                                     }} style={{
-                                        padding: '7px 14px', borderRadius: '12px',
+                                        padding: '7px 14px', borderRadius: '13px',
                                         background: `rgba(${rgb},0.13)`,
                                         border: `1px solid rgba(${rgb},0.35)`, color: c,
-                                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                        fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                                         letterSpacing: '0.02em', transition: 'all 0.15s',
                                     }}
                                     onMouseOver={e => { e.currentTarget.style.background = `rgba(${rgb},0.25)`; }}
@@ -1138,9 +1143,9 @@ const ProjectList = () => {
                             })}
                             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
                             <button onClick={() => setSelectedIds([])} style={{
-                                padding: '7px 14px', borderRadius: '12px',
+                                padding: '7px 14px', borderRadius: '13px',
                                 background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                                color: '#f87171', fontSize: '12px', fontWeight: 700, cursor: 'pointer',
+                                color: '#f87171', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
                                 display: 'flex', alignItems: 'center', gap: '5px', transition: 'all 0.15s',
                             }}
                             onMouseOver={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.18)'; }}
@@ -1162,7 +1167,7 @@ const ProjectList = () => {
                             <button
                                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                 disabled={currentPage === 1}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === 1 ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 700, transition: 'all 0.15s' }}
                             ><ChevronLeft size={14} /></button>
 
                             {Array.from({ length: Math.min(totalPages, 9) }, (_, i) => {
@@ -1173,7 +1178,7 @@ const ProjectList = () => {
                                 );
                                 return (
                                     <button key={page} onClick={() => setCurrentPage(page)}
-                                        style={{ minWidth: '34px', height: '34px', borderRadius: '10px', border: page === currentPage ? '1px solid rgba(99,102,241,0.6)' : '1px solid rgba(255,255,255,0.07)', background: page === currentPage ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.03)', color: page === currentPage ? '#a5b4fc' : 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '11px', fontWeight: page === currentPage ? 900 : 600, transition: 'all 0.15s' }}
+                                        style={{ minWidth: '34px', height: '34px', borderRadius: '10px', border: page === currentPage ? '1px solid rgba(99,102,241,0.6)' : '1px solid rgba(255,255,255,0.07)', background: page === currentPage ? 'rgba(99,102,241,0.18)' : 'rgba(255,255,255,0.03)', color: page === currentPage ? '#a5b4fc' : 'rgba(255,255,255,0.45)', cursor: 'pointer', fontSize: '12px', fontWeight: page === currentPage ? 900 : 600, transition: 'all 0.15s' }}
                                     >{page}</button>
                                 );
                             })}
@@ -1181,7 +1186,7 @@ const ProjectList = () => {
                             <button
                                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                 disabled={currentPage === totalPages}
-                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === totalPages ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '11px', fontWeight: 700, transition: 'all 0.15s' }}
+                                style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '7px 14px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.04)', color: currentPage === totalPages ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.7)', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontSize: '12px', fontWeight: 700, transition: 'all 0.15s' }}
                             ><ChevronRight size={14} /></button>
                         </>
                     )}
@@ -1196,7 +1201,7 @@ const ProjectList = () => {
                             color: isShowingAll ? '#60a5fa' : 'rgba(255,255,255,0.6)',
                             cursor: 'pointer', fontSize: '10px', fontWeight: 900,
                             letterSpacing: '0.05em', textTransform: 'uppercase',
-                            transition: 'all 0.2s', marginLeft: '12px'
+                            transition: 'all 0.2s', marginLeft: '13px'
                         }}
                         className="hover:scale-105 active:scale-95"
                     >
@@ -1318,14 +1323,14 @@ const ProjectList = () => {
                                             />
                                         </Field>
                                         <Field label="マスタ更新">
-                                            <div style={{ display: 'flex', alignItems: 'center', height: '45px', gap: '12px' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', height: '45px', gap: '13px' }}>
                                                 <input
                                                     type="checkbox"
                                                     className="checkbox-v5"
                                                     checked={newProject.master_update_done}
                                                     onChange={e => setNewProject({ ...newProject, master_update_done: e.target.checked })}
                                                 />
-                                                <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontFamily: 'Outfit, sans-serif' }}>
+                                                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontFamily: 'Outfit, sans-serif' }}>
                                                     {newProject.master_update_done ? '完了' : '未完了'}
                                                 </span>
                                             </div>
@@ -1468,13 +1473,13 @@ const ProjectList = () => {
                                             </Field>
                                         </div>
 
-                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                        <div style={{ display: 'flex', gap: '13px' }}>
                                             <button type="submit" style={{
-                                                flex: 1, padding: '14px',
+                                                flex: 1, padding: '13px',
                                                 background: 'linear-gradient(135deg, rgba(59,130,246,0.25), rgba(99,102,241,0.2))',
                                                 border: '1px solid rgba(59,130,246,0.35)',
-                                                borderRadius: '14px', color: '#fff', fontWeight: 900,
-                                                fontSize: '12px', letterSpacing: '0.18em', textTransform: 'uppercase',
+                                                borderRadius: '13px', color: '#fff', fontWeight: 900,
+                                                fontSize: '13px', letterSpacing: '0.18em', textTransform: 'uppercase',
                                                 cursor: 'pointer', transition: 'all 0.2s',
                                             }}>
                                                 COMMIT CONFIGURATION
@@ -1488,8 +1493,8 @@ const ProjectList = () => {
                                                 padding: '14px 18px',
                                                 background: 'rgba(239,68,68,0.1)',
                                                 border: '1px solid rgba(239,68,68,0.3)',
-                                                borderRadius: '14px', color: '#f87171', fontWeight: 900,
-                                                fontSize: '12px', cursor: 'pointer', transition: 'all 0.2s',
+                                                borderRadius: '13px', color: '#f87171', fontWeight: 900,
+                                                fontSize: '13px', cursor: 'pointer', transition: 'all 0.2s',
                                                 display: 'flex', alignItems: 'center', gap: '6px',
                                             }}>
                                                 <Trash2 size={14} />
@@ -1531,11 +1536,11 @@ const ProjectList = () => {
                                     </h2>
                                     <div style={{
                                         display: 'inline-flex', alignItems: 'center', gap: '6px',
-                                        marginTop: '12px', padding: '4px 12px', borderRadius: '8px',
+                                        marginTop: '13px', padding: '4px 12px', borderRadius: '8px',
                                         background: sc.bg, border: `1px solid ${sc.border}`,
                                     }}>
                                         <div style={{ width: 6, height: 6, borderRadius: '50%', background: sc.text, boxShadow: `0 0 6px ${sc.text}` }} />
-                                        <span style={{ fontSize: '11px', fontWeight: 800, color: sc.text, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{dp.status}</span>
+                                        <span style={{ fontSize: '12px', fontWeight: 800, color: sc.text, textTransform: 'uppercase', letterSpacing: '0.12em' }}>{dp.status}</span>
                                     </div>
                                 </div>
 
@@ -1543,42 +1548,42 @@ const ProjectList = () => {
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div>
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>号機 / ID</label>
-                                            <p style={{ fontSize: '14px', fontWeight: 900, color: '#60a5fa', fontFamily: 'Outfit, monospace', marginTop: '6px' }}>{dp.id}</p>
+                                            <p style={{ fontSize: '13px', fontWeight: 900, color: '#60a5fa', fontFamily: 'Outfit, monospace', marginTop: '6px' }}>{dp.id}</p>
                                         </div>
                                         <div>
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>物件名</label>
-                                            <p style={{ fontSize: '15px', fontWeight: 800, color: '#fff', marginTop: '6px', lineHeight: 1.3 }}>{dp.name}</p>
+                                            <p style={{ fontSize: '12px', fontWeight: 800, color: '#fff', marginTop: '6px', lineHeight: 1.3 }}>{dp.name}</p>
                                         </div>
                                     </div>
 
-                                    <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
+                                    <div style={{ padding: '14px 16px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '13px' }}>
                                         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
                                             <MapPin size={15} style={{ color: 'rgba(255,255,255,0.25)', marginTop: '2px', flexShrink: 0 }} />
                                             <div>
                                                 <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>住所</label>
-                                                <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.65)', marginTop: '4px', fontWeight: 600, lineHeight: 1.5 }}>
+                                                <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.65)', marginTop: '4px', fontWeight: 600, lineHeight: 1.5 }}>
                                                     {dp.address || '住所未登録'}
                                                 </p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                        <div style={{ padding: '12px 14px', background: 'rgba(0,242,255,0.04)', border: '1px solid rgba(0,242,255,0.12)', borderRadius: '12px' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '13px' }}>
+                                        <div style={{ padding: '12px 14px', background: 'rgba(0,242,255,0.04)', border: '1px solid rgba(0,242,255,0.12)', borderRadius: '13px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <Hash size={13} style={{ color: 'rgba(0,242,255,0.5)', flexShrink: 0 }} />
                                                 <div>
                                                     <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>電話番号</label>
-                                                    <p style={{ fontSize: '12px', fontWeight: 800, fontFamily: 'Outfit, monospace', color: 'rgba(0,242,255,0.7)', marginTop: '3px' }}>{dp.phone || '---'}</p>
+                                                    <p style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'Outfit, monospace', color: 'rgba(0,242,255,0.7)', marginTop: '3px' }}>{dp.phone || '---'}</p>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px' }}>
+                                        <div style={{ padding: '12px 14px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '13px' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                 <Cpu size={13} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
                                                 <div>
                                                     <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase', letterSpacing: '0.14em' }}>タイプ</label>
-                                                    <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '3px' }}>{dp.locker_type || '---'}</p>
+                                                    <p style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '3px' }}>{dp.locker_type || '---'}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -1588,17 +1593,17 @@ const ProjectList = () => {
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>対応予定日</label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
                                                 <CalendarDays size={13} style={{ color: sc.text, opacity: 0.7 }} />
-                                                <p style={{ fontSize: '13px', fontWeight: 800, fontFamily: 'Outfit, monospace', color: sc.text }}>{dp.support_date || '未設定'}</p>
+                                                <p style={{ fontSize: '12px', fontWeight: 800, fontFamily: 'Outfit, monospace', color: sc.text }}>{dp.support_date || '未設定'}</p>
                                             </div>
                                         </div>
                                         <div>
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>メンテ月</label>
-                                            <p style={{ fontSize: '13px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '6px' }}>{formatMaintenanceMonth(dp.maintenance_month)}</p>
+                                            <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '6px' }}>{formatMaintenanceMonth(dp.maintenance_month)}</p>
                                         </div>
                                     </div>
 
                                     <div style={{
-                                        padding: '12px 16px', borderRadius: '12px',
+                                        padding: '12px 16px', borderRadius: '13px',
                                         background: dp.master_update_done ? 'rgba(168, 85, 247, 0.08)' : 'rgba(255,255,255,0.02)',
                                         border: `1px solid ${dp.master_update_done ? 'rgba(168, 85, 247, 0.8)' : 'rgba(255,255,255,0.06)'}`,
                                         display: 'flex', alignItems: 'center', gap: '10px',
@@ -1615,7 +1620,7 @@ const ProjectList = () => {
                                                     : 'none'
                                             }}
                                         />
-                                        <span style={{ fontSize: '12px', fontWeight: 700, color: dp.master_update_done ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
+                                        <span style={{ fontSize: '13px', fontWeight: 700, color: dp.master_update_done ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
                                             マスタ更新: {dp.master_update_done ? 'OK (COMPLETED)' : '未完了'}
                                         </span>
                                     </div>
