@@ -8,170 +8,28 @@ Vite + React + Supabase (PostgreSQL) を利用。
 - **Frontend**: React 19, Vite 7 (SWC), Tailwind CSS v4 (@tailwindcss/vite)
 - **Database**: Supabase (`projects` テーブル, unit_id が表示上の号機ID)
 - **UI Libraries**: Lucide-React, Recharts, Framer Motion, React-Leaflet
-- **CSS**: `@import "tailwindcss"` + `@theme` block (tailwind.config.js不要)
-```
-
-## Supabase `projects` テーブル主要カラム
-```js
-done:       '#10b981'  // エメラルドグリーン (対応済)
-planned:    '#f59e0b'  // アンバー (対応予定)
-pending:    '#64748b'  // スレート (未対応)
-total:      '#3b82f6'  // プライマリブルー (全体)
-reschedule: '#ef4444'  // レッド (リスケ)
-```
+- **CSS**: `@import "tailwindcss"` + `@theme` block
 
 ## 重要な実装知識
 - `border-left` on `<tr>` は効かない → `box-shadow: inset 3px 0 0 color` を使う
 - motion.tr の `layout` prop は重い → 削除してパフォーマンス改善
 - MapContainer には必ず `style={{ height: '100%' }}` + 親に固定高さが必要
-- ESLint: `icon: Icon` パターンでJSX使用時にno-unused-vars発生 → `node: <Icon />` パターンに変更
-- ESLint: named export + default export の同居 → `// eslint-disable-next-line react-refresh/only-export-components`
-- PieChart 0時スタート: `startAngle={90} endAngle={-270}`
-- **Framer Motion stagger バグ**: `motion.tbody` の key を `tbodyAnimKey = \`${filteredProjects.length}-${searchTerm}-${statusFilter}-${masterFilter}\`` にすることで、個別フィールド更新（master_update_done等）時のstagger再実行を防止
+- **Framer Motion stagger バグ**: `motion.tbody` の key を `tbodyAnimKey` にすることで、個別フィールド更新時のstagger再実行を防止。
 
-## UI設計こだわり (premium-ui skill)
-- single color禁止 → linear-gradient必須
-- glass-morphism: `backdrop-filter: blur()`
-- 複数 box-shadow で depth表現
-- `status = '対応済' AND support_date > CURRENT_DATE` → `'対応予定'` に一括更新（対応済ポカ修正）
+## UI設計こだわり
+- **Real-time Sync**: `projects` テーブルへの `postgres_changes` 購読を追加。`INSERT` (重複チェック付き), `UPDATE` (正規化付き), `DELETE` を個別処理。
+- **UUID マッチング**: DB更新時は UUID (`id`) を主キーとして使用し、`unit_id` 変更による不整合を防止。
+- **正規化ロジック**: `status = '対応済' AND support_date > CURRENT_DATE` は `'対応予定'` に自動変換。
+- **ヘッダー配置**: `.header-content-inner` に `width: 100%` を設定し、アクティブユーザーを右端に配置。
 
 ### AppContext.jsx
-- `fetchProjects` 内でフロントエンド側も正規化: `isFuture && status === '対応済'` → `'対応予定'` に変換
-- DB と画面が常に整合性を保つ二重チェック
-
-### CalendarView.jsx
-- 外側ラッパー: `space-y-8` → flexbox `gap: '48px'` でヘッダー〜カレンダー間隔を拡大
-- Legend に `marginTop: '-32px'` を追加して過剰な余白を圧縮
-- **Detail モーダル**: `FileCheck`, `Settings2` アイコンをインポート追加
-  - ロッカー型番（`sp.locker_type` 条件付き）を追加
-  - マスタ更新（完了/未完了 色分け）を追加
-
-### index.css
-- `.th-label` フォントサイズ: `10px` → `12px`（ヘッダー行テキストを大きく）
-- `.th-label` 文字色: `rgba(255,255,255,0.28)` → `0.35`（視認性向上）
-- `thead tr` 背景グラデーション強化
-- `thead th { min-height: 68px }` 追加
+- `formatProject` 内でフロントエンド側も正規化: `isFuture && status === '対応済'` → `'対応予定'` に変換。
+- DB と画面が常に整合性を保つ二重チェックを実装。
 
 ### ProjectList.jsx
-- sticky header `marginBottom`: `28px` → `40px`（検索バー〜テーブル余白拡大）
-- `address` カラム: `notes` の `"Address: 住所\nLocker: 型番"` から住所のみクリーン抽出
-- `locker_type` カラム: 同 notes から `Locker:` 以降を抽出
-- 既存レコード: `support_date > CURRENT_DATE AND status = '未対応'` → `'対応予定'` に一括更新
-- `lat DOUBLE PRECISION`, `lng DOUBLE PRECISION` カラム追加
+- **ステータス自動遷移**: 未来日付設定時に「対応予定」へ自動変更する `handleSupportDateChange` を実装。
+- **Ultra Rich Header**: `.th-label-rich` による高品位なヘッダーデザイン。
 
-### AppContext.jsx
-- `fetchProjects` の data mapping に `lat: p.lat ?? null, lng: p.lng ?? null` 追加
-
-### Dashboard.jsx
-- 外側ラッパー: `space-y-12` → flexbox `gap: '56px'` でタイトルと統計カード間の余白拡大
-- `<header>` に `paddingBottom: '8px'` 追加
-
-### ProjectList.jsx
-- **マスタ更新レスポンス改善**: `tbodyAnimKey` を filter 状態のみに依存させ、個別フィールド更新時のstagger再実行を防止
-- **ヘッダー行**: `px-5 py-5` → `px-6 py-7` で縦幅拡大
-- **Detail モーダル**: `locker_type` 行を `Settings2` アイコン付きで追加
-
-### MapView.jsx (全面刷新)
-- Nominatim (OpenStreetMap) ジオコーディング実装: 住所→座標変換、APIキー不要、無料
-- バッチ処理: `handleGeocode` で住所ありかつ lat/lng なし の物件を1件/秒で処理
-- 進捗表示: `{done}/{total} <物件名>` をボタン内にリアルタイム表示
-- 完了後: 成功/失敗件数を表示
-- ポップアップ: `locker_type` を表示
-- ピンなし時: ジオコーディングボタンの使い方を案内
-
-# Project Memory - dialpad-migration-manager
-
-## プロジェクト概要
-Dialpadの移行管理ツール。物件（ロッカー）ごとの通信工事移行状況を管理する。
-Vite + React + Supabase (PostgreSQL) を利用。
-
-## 技術スタック
-- **Frontend**: React 19, Vite 7 (SWC), Tailwind CSS v4 (@tailwindcss/vite)
-- **Database**: Supabase (`projects` テーブル, unit_id が表示上の号機ID)
-- **UI Libraries**: Lucide-React, Recharts, Framer Motion, React-Leaflet
-- **CSS**: `@import "tailwindcss"` + `@theme` block (tailwind.config.js不要)
-```
-
-## Supabase `projects` テーブル主要カラム
-```js
-done:       '#10b981'  // エメラルドグリーン (対応済)
-planned:    '#f59e0b'  // アンバー (対応予定)
-pending:    '#64748b'  // スレート (未対応)
-total:      '#3b82f6'  // プライマリブルー (全体)
-reschedule: '#ef4444'  // レッド (リスケ)
-```
-
-## 重要な実装知識
-- `border-left` on `<tr>` は効かない → `box-shadow: inset 3px 0 0 color` を使う
-- motion.tr の `layout` prop は重い → 削除してパフォーマンス改善
-- MapContainer には必ず `style={{ height: '100%' }}` + 親に固定高さが必要
-- ESLint: `icon: Icon` パターンでJSX使用時にno-unused-vars発生 → `node: <Icon />` パターンに変更
-- ESLint: named export + default export の同居 → `// eslint-disable-next-line react-refresh/only-export-components`
-- PieChart 0時スタート: `startAngle={90} endAngle={-270}`
-- **Framer Motion stagger バグ**: `motion.tbody` の key を `tbodyAnimKey = \`${filteredProjects.length}-${searchTerm}-${statusFilter}-${masterFilter}\`` にすることで、個別フィールド更新（master_update_done等）時のstagger再実行を防止
-
-## UI設計こだわり (premium-ui skill)
-- single color禁止 → linear-gradient必須
-- glass-morphism: `backdrop-filter: blur()`
-- 複数 box-shadow で depth表現
-- `status = '対応済' AND support_date > CURRENT_DATE` → `'対応予定'` に一括更新（対応済ポカ修正）
-
-### AppContext.jsx
-- `fetchProjects` 内でフロントエンド側も正規化: `isFuture && status === '対応済'` → `'対応予定'` に変換
-- DB と画面が常に整合性を保つ二重チェック
-
-### CalendarView.jsx
-- 外側ラッパー: `space-y-8` → flexbox `gap: '48px'` でヘッダー〜カレンダー間隔を拡大
-- Legend に `marginTop: '-32px'` を追加して過剰な余白を圧縮
-- **Detail モーダル**: `FileCheck`, `Settings2` アイコンをインポート追加
-  - ロッカー型番（`sp.locker_type` 条件付き）を追加
-  - マスタ更新（完了/未完了 色分け）を追加
-
-### index.css
-- `.th-label` フォントサイズ: `10px` → `12px`（ヘッダー行テキストを大きく）
-- `.th-label` 文字色: `rgba(255,255,255,0.28)` → `0.35`（視認性向上）
-- `thead tr` 背景グラデーション強化
-- `thead th { min-height: 68px }` 追加
-
-### ProjectList.jsx
-- sticky header `marginBottom`: `28px` → `40px`（検索バー〜テーブル余白拡大）
-- `address` カラム: `notes` の `"Address: 住所\nLocker: 型番"` から住所のみクリーン抽出
-- `locker_type` カラム: 同 notes から `Locker:` 以降を抽出
-- 既存レコード: `support_date > CURRENT_DATE AND status = '未対応'` → `'対応予定'` に一括更新
-- `lat DOUBLE PRECISION`, `lng DOUBLE PRECISION` カラム追加
-
-### AppContext.jsx
-- `fetchProjects` の data mapping に `lat: p.lat ?? null, lng: p.lng ?? null` 追加
-
-### Dashboard.jsx
-- 外側ラッパー: `space-y-12` → flexbox `gap: '56px'` でタイトルと統計カード間の余白拡大
-- `<header>` に `paddingBottom: '8px'` 追加
-
-### ProjectList.jsx
-- **マスタ更新レスポンス改善**: `tbodyAnimKey` を filter 状態のみに依存させ、個別フィールド更新時のstagger再実行を防止
-- **ヘッダー行**: `px-5 py-5` → `px-6 py-7` で縦幅拡大
-- **Detail モーダル**: `locker_type` 行を `Settings2` アイコン付きで追加
-
-### MapView.jsx (全面刷新)
-- Nominatim (OpenStreetMap) ジオコーディング実装: 住所→座標変換、APIキー不要、無料
-- バッチ処理: `handleGeocode` で住所ありかつ lat/lng なし の物件を1件/秒で処理
-- 進捗表示: `{done}/{total} <物件名>` をボタン内にリアルタイム表示
-- 完了後: 成功/失敗件数を表示
-- ポップアップ: `locker_type` を表示
-- ピンなし時: ジオコーディングボタンの使い方を案内
-
-## 更新履歴 (過去セッション)
-### Session 1-2 (2026-03-09)
-- Supabase 接続、projects テーブル初期設計
-- Dashboard, ProjectList, CalendarView, MapView, RouteFinder 各コンポーネント作成
-- ProjectList: Edit/Detail ボタン分離、号機(unit_id)編集可能、Create Node モーダル
-- RouteFinder: 最近傍アルゴリズム + プレミアムUI
-- CalendarView: 詳細モーダルの順序修正 (号機→物件名)
-- ライセンス数入力 (右下固定) + 残ライセンス表示
-t e s t  
- 
-### ProjectList.jsx (v18)
-- **Ultra Rich Header**: `.th-label-rich` クラスを導入。`letter-spacing: 0.28em`, `font-weight: 950`, `text-shadow` 加圧により、極限の視認性と美しさを両立。ホバー時に `translateY` と光彩拡大のアニメーションを付与。
-- **Layout Integrity**: フィルターバーにボタンを詰め込みすぎると改行が発生するため、`Clear Selection` ボタンはテーブル下部 (`main` タグの直後) に配置。`AnimatePresence` で選択時のみ浮遊表示。
-- **Syntax Caution**: `createPortal` や IIFE を含む JSX 構造の変更時は、`div` タグの閉じ忘れに細心の注意を払うこと（stickyパネルやモーダルのネストが深いため）。
- 
+### Supabase 設定 (Realtime)
+- `projects` テーブルを `supabase_realtime` パブリケーションに追加。
+- `ALTER TABLE projects REPLICA IDENTITY FULL;` を実行し、全カラムの変更通知を有効化。

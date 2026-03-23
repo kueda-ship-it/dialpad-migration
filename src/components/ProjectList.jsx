@@ -836,11 +836,15 @@ const ProjectList = () => {
 
         const newDate = rawValue.replace(/-/g, '/');
         updateProjectField(project.id, 'support_date', newDate);
-        if (rawValue && project.status === '未対応') {
+        
+        // 日付が設定された場合
+        if (rawValue) {
             const selected = new Date(rawValue);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            if (selected >= today) {
+            
+            // 未来日付かつ（未対応または対応済み）の場合、対応予定に自動設定
+            if (selected >= today && (project.status === '未対応' || project.status === '対応済')) {
                 updateProjectStatus(project.id, '対応予定');
             }
         }

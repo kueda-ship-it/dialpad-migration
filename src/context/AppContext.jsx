@@ -189,6 +189,27 @@ export const AppProvider = ({ children }) => {
             fetchLicenseCount();
         }
     }, [fetchLicenseCount, authLoading]);
+    
+    // Helper to format project data uniformly
+    const formatProject = useCallback((p) => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const rawStatus = p.status || '未対応';
+        const isFuture = p.support_date && new Date(String(p.support_date).replace(/-/g, '/')) > now;
+        // 未来日付なのに対応済は論理矛盾 → 対応予定に正規化
+        const effectiveStatus = (isFuture && rawStatus === '対応済') ? '対応予定' : rawStatus;
+        
+        return {
+            ...p,
+            id: p.unit_id || p.id, // Display ID (used by components)
+            uuid: p.id,            // Keep original UUID for stable matching
+            phone: p.phone_number || p.phone,
+            status: effectiveStatus,
+            address: p.address || '',
+            lat: p.lat ?? null,
+            lng: p.lng ?? null,
+        };
+    }, []);
 
     // Fetch projects from Supabase
     const fetchProjects = useCallback(async () => {
@@ -202,24 +223,7 @@ export const AppProvider = ({ children }) => {
             if (error) throw error;
 
             if (data && data.length > 0) {
-                // Supabase data exists
-                const now = new Date();
-                now.setHours(0, 0, 0, 0);
-                const formatted = data.map(p => {
-                    const rawStatus = p.status || '未対応';
-                    const isFuture = p.support_date && new Date(String(p.support_date).replace(/-/g, '/')) > now;
-                    // 未来日付なのに対応済は論理矛盾 → 対応予定に正規化
-                    const effectiveStatus = (isFuture && rawStatus === '対応済') ? '対応予定' : rawStatus;
-                    return {
-                        ...p,
-                        id: p.unit_id || p.id, // Use unit_id as the displayed ID if available
-                        phone: p.phone_number || p.phone,
-                        status: effectiveStatus,
-                        address: p.address || '',
-                        lat: p.lat ?? null,
-                        lng: p.lng ?? null,
-                    };
-                });
+                const formatted = data.map(formatProject);
                 setProjects(formatted);
             } else {
                 // Fallback to localStorage or mockData
@@ -238,13 +242,49 @@ export const AppProvider = ({ children }) => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [formatProject]);
+
+    // Real-time subscription for projects table
+    useEffect(() => {
+        console.log('Subscribing to projects realtime changes...');
+        const channel = supabase
+            .channel('projects_table_changes')
+            .on('postgres_changes', { 
+                event: '*', 
+                schema: 'public', 
+                table: 'projects' 
+            }, payload => {
+                console.log('Realtime project change received:', payload.eventType, payload);
+                if (payload.eventType === 'INSERT') {
+                    const newProj = formatProject(payload.new);
+                    setProjects(prev => {
+                        // Check if already exists (optimistic update handle)
+                        if (prev.some(p => p.uuid === newProj.uuid || p.id === newProj.id)) return prev;
+                        return [newProj, ...prev];
+                    });
+                } else if (payload.eventType === 'UPDATE') {
+                    const updated = formatProject(payload.new);
+                    setProjects(prev => prev.map(p => (p.uuid === updated.uuid || p.id === updated.id) ? updated : p));
+                } else if (payload.eventType === 'DELETE') {
+                    // Use payload.old.id (UUID) as it's guaranteed in REPLICA IDENTITY FULL or PK
+                    setProjects(prev => prev.filter(p => p.uuid !== payload.old.id && p.id !== payload.old.id));
+                }
+            })
+            .subscribe((status) => {
+                console.log('Projects realtime subscription status:', status);
+            });
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+    }, [formatProject]);
 
     useEffect(() => {
         if (!authLoading) {
             fetchProjects();
         }
     }, [fetchProjects, authLoading]);
+
     const [selectedIds, setSelectedIds] = useState([]);
     const [notifications, setNotifications] = useState([]);
     const [notificationSettings, setNotificationSettings] = useState(() => {
@@ -377,18 +417,59 @@ export const AppProvider = ({ children }) => {
     };
 
     const updateProjectStatus = async (id, status) => {
+        const project = projects.find(p => p.id === id);
+        console.log('Updating project status:', id, status, 'UUID:', project?.uuid);
+        
+        // Optimistic update
         setProjects(prev => prev.map(p => p.id === id ? { ...p, status } : p));
-        await supabase.from('projects').update({ status }).eq('unit_id', id);
+        
+        const targetId = project?.uuid || null;
+        if (targetId) {
+            const { error } = await supabase.from('projects').update({ status }).eq('id', targetId);
+            if (error) console.error('Error updating status:', error);
+        } else {
+            const { error } = await supabase.from('projects').update({ status }).eq('unit_id', id);
+            if (error) console.error('Error updating status (fallback):', error);
+        }
+    };
+
+    const updateProjectField = async (id, field, value) => {
+        const project = projects.find(p => p.id === id);
+        console.log('Updating project field:', id, field, value, 'UUID:', project?.uuid);
+
+        // Optimistic update
+        setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
+        
+        let dbValue = value;
+        let dbField = field;
+        
+        if (field === 'support_date') {
+            dbValue = value ? value.replace(/\//g, '-') : null;
+        } else if (field === 'phone') {
+            dbField = 'phone_number';
+        }
+
+        const targetId = project?.uuid || null;
+        if (targetId) {
+            const { error } = await supabase.from('projects').update({ [dbField]: dbValue }).eq('id', targetId);
+            if (error) console.error('Error updating field:', error);
+        } else {
+            const { error } = await supabase.from('projects').update({ [dbField]: dbValue }).eq('unit_id', id);
+            if (error) console.error('Error updating field (fallback):', error);
+        }
     };
 
     const updateProject = async (updatedProject) => {
-        // original_id tracks the old unit_id before any rename
         const originalId = updatedProject.original_id || updatedProject.id;
+        const project = projects.find(p => p.id === originalId);
+
         setProjects(prev => prev.map(p =>
-            p.id === originalId ? { ...updatedProject, id: updatedProject.id } : p
+            p.id === originalId ? { ...updatedProject, id: updatedProject.id, uuid: p.uuid } : p
         ));
-        await supabase.from('projects').update({
-            unit_id: updatedProject.id,          // allow unit_id rename
+
+        const targetId = project?.uuid || null;
+        const updateData = {
+            unit_id: updatedProject.id,
             name: updatedProject.name,
             address: updatedProject.address || '',
             phone_number: updatedProject.phone,
@@ -398,41 +479,43 @@ export const AppProvider = ({ children }) => {
             status: updatedProject.status,
             support_date: updatedProject.support_date ? updatedProject.support_date.replace(/\//g, '-') : null,
             master_update_done: updatedProject.master_update_done || false,
-        }).eq('unit_id', originalId);
-    };
+        };
 
-    const updateProjectField = async (id, field, value) => {
-        setProjects(prev => prev.map(p => p.id === id ? { ...p, [field]: value } : p));
-        
-        let dbValue = value;
-        let dbField = field;
-        
-        if (field === 'support_date') {
-            // 日本語UIでは / 区切りだが DB は - 区切り。空文字は明確に null にする。
-            dbValue = value ? value.replace(/\//g, '-') : null;
-        } else if (field === 'phone') {
-            dbField = 'phone_number';
+        if (targetId) {
+            await supabase.from('projects').update(updateData).eq('id', targetId);
+        } else {
+            await supabase.from('projects').update(updateData).eq('unit_id', originalId);
         }
-
-        const { error } = await supabase.from('projects').update({ [dbField]: dbValue }).eq('unit_id', id);
-        if (error) console.error(`Error updating project field ${field}:`, error);
     };
 
     const toggleMasterUpdate = async (id) => {
         const project = projects.find(p => p.id === id);
         if (!project) return;
         const newValue = !project.master_update_done;
+        
         // Optimistic UI update
         setProjects(prev => prev.map(p => p.id === id ? { ...p, master_update_done: newValue } : p));
-        // Background DB sync
-        supabase.from('projects').update({ master_update_done: newValue }).eq('unit_id', id).then(({ error }) => {
+        
+        const targetId = project?.uuid || null;
+        if (targetId) {
+            const { error } = await supabase.from('projects').update({ master_update_done: newValue }).eq('id', targetId);
             if (error) console.error('Error updating master status:', error);
-        });
+        } else {
+            const { error } = await supabase.from('projects').update({ master_update_done: newValue }).eq('unit_id', id);
+            if (error) console.error('Error updating master status:', error);
+        }
     };
 
     const deleteProject = async (id) => {
+        const project = projects.find(p => p.id === id);
         setProjects(prev => prev.filter(p => p.id !== id));
-        await supabase.from('projects').delete().eq('unit_id', id);
+        
+        const targetId = project?.uuid || null;
+        if (targetId) {
+            await supabase.from('projects').delete().eq('id', targetId);
+        } else {
+            await supabase.from('projects').delete().eq('unit_id', id);
+        }
     };
 
     const toggleSelection = (id) => {
@@ -456,7 +539,6 @@ export const AppProvider = ({ children }) => {
         }, 500);
     }, [licenseCount]);
 
-    // pass functional updaters directly to React state so rapid long-press accumulates correctly
     const updateLicenseCount = (newCountOrUpdater) => {
         setLicenseCount(newCountOrUpdater);
     };
@@ -501,7 +583,6 @@ export const AppProvider = ({ children }) => {
     );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components
 export const useApp = () => {
     const context = useContext(AppContext);
     if (!context) throw new Error('useApp must be used within AppProvider');
