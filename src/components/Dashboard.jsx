@@ -2,7 +2,7 @@ import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import {
     Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-    PieChart, Pie, Cell, Line, ComposedChart
+    PieChart, Pie, Cell, Line, ComposedChart, LabelList
 } from 'recharts';
 import { CheckCircle, Clock, AlertCircle, Layers, BarChart2, TrendingUp, ChevronDown, CalendarDays } from 'lucide-react';
 
@@ -57,7 +57,7 @@ const Dashboard = () => {
         if (selectedYear !== 'all') {
             // 特定年: 12ヶ月表示
             const mStats = Array.from({ length: 12 }, (_, i) => ({
-                month: (i + 1) + "月", completed: 0, planned: 0,
+                month: (i + 1) + "月", completed: 0, planned: 0, total: 0,
             }));
             projects.forEach(p => {
                 if (!p.support_date) return;
@@ -68,6 +68,7 @@ const Dashboard = () => {
                 if (p.status === '対応済')           mStats[idx].completed++;
                 else if (p.status === '対応予定') mStats[idx].planned++;
             });
+            mStats.forEach(s => { s.total = s.completed + s.planned; });
             return mStats;
         } else {
             // 全期間: 年月ごとに展開し全月表示
@@ -80,14 +81,14 @@ const Dashboard = () => {
                 if (isNaN(y)) return;
                 const key = y * 100 + m;
                 const label = y + "年" + m + "月";
-                if (!map.has(key)) map.set(key, { month: label, completed: 0, planned: 0 });
+                if (!map.has(key)) map.set(key, { month: label, completed: 0, planned: 0, total: 0 });
                 const entry = map.get(key);
                 if (p.status === '対応済')           entry.completed++;
                 else if (p.status === '対応予定') entry.planned++;
             });
             return Array.from(map.entries())
                 .sort((a, b) => a[0] - b[0])
-                .map(([, v]) => v);
+                .map(([, v]) => ({ ...v, total: v.completed + v.planned }));
         }
     }, [projects, selectedYear]);
 
@@ -203,12 +204,26 @@ const Dashboard = () => {
                                 {chartType === 'bar' ? (
                                     <>
                                         <Bar dataKey="completed" stackId="a" fill={STATUS_COLORS.done}    name="完了"   maxBarSize={28} radius={[6, 6, 0, 0]} />
-                                        <Bar dataKey="planned"   stackId="a" fill={STATUS_COLORS.planned} name="対応予定" maxBarSize={28} radius={[6, 6, 0, 0]} />
+                                        <Bar dataKey="planned"   stackId="a" fill={STATUS_COLORS.planned} name="対応予定" maxBarSize={28} radius={[6, 6, 0, 0]}>
+                                            <LabelList
+                                                dataKey="total"
+                                                position="top"
+                                                formatter={(v) => v ? `${v}件` : ''}
+                                                style={{ fill: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em' }}
+                                            />
+                                        </Bar>
                                     </>
                                 ) : (
                                     <>
                                         <Line type="monotone" dataKey="completed" stroke={STATUS_COLORS.done}    strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.done }}    name="完了" />
-                                        <Line type="monotone" dataKey="planned"   stroke={STATUS_COLORS.planned} strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.planned }} name="対応予定" />
+                                        <Line type="monotone" dataKey="planned"   stroke={STATUS_COLORS.planned} strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.planned }} name="対応予定">
+                                            <LabelList
+                                                dataKey="total"
+                                                position="top"
+                                                formatter={(v) => v ? `${v}件` : ''}
+                                                style={{ fill: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em' }}
+                                            />
+                                        </Line>
                                     </>
                                 )}
                             </ComposedChart>
