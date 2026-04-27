@@ -149,16 +149,20 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
 /* ─── InlineDatePicker ────────────────────────────────────────────────────── */
 const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
     const [showPicker, setShowPicker] = useState(false);
-    const [pickerPos, setPickerPos] = useState({ top: 0, left: 0 });
+    const [pickerPos, setPickerPos] = useState({ top: undefined, bottom: undefined, left: 0 });
     const btnRef = useRef(null);
     const sc = STATUS_COLORS[project.status] || {};
 
     const openPicker = () => {
         if (!canInlineEdit) return;
         const rect = btnRef.current.getBoundingClientRect();
-        // ポップアップが画面右端を超えないよう調整
         const left = Math.min(rect.left, window.innerWidth - 280);
-        setPickerPos({ top: rect.bottom + 6, left });
+        const dropUp = rect.bottom > window.innerHeight / 2;
+        if (dropUp) {
+            setPickerPos({ top: undefined, bottom: window.innerHeight - rect.top + 6, left });
+        } else {
+            setPickerPos({ top: rect.bottom + 6, bottom: undefined, left });
+        }
         setShowPicker(true);
     };
 
@@ -229,7 +233,7 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
                     ref={pickerRef}
                     className="fixed rounded-2xl border border-white/[0.1] shadow-2xl p-3"
                     style={{
-                        top: pickerPos.top, left: pickerPos.left,
+                        top: pickerPos.top, bottom: pickerPos.bottom, left: pickerPos.left,
                         background: 'linear-gradient(135deg, #1a2540 0%, #151e35 100%)',
                         zIndex: 9999,
                         boxShadow: '0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.05)',
