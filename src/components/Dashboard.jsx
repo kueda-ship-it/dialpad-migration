@@ -202,7 +202,7 @@ const Dashboard = () => {
                                 />
                                 {chartType === 'bar' ? (
                                     <>
-                                        <Bar dataKey="completed" stackId="a" fill={STATUS_COLORS.done}    name="完了"   maxBarSize={28} radius={[0, 0, 0, 0]} />
+                                        <Bar dataKey="completed" stackId="a" fill={STATUS_COLORS.done}    name="完了"   maxBarSize={28} radius={[6, 6, 0, 0]} />
                                         <Bar dataKey="planned"   stackId="a" fill={STATUS_COLORS.planned} name="対応予定" maxBarSize={28} radius={[6, 6, 0, 0]} />
                                     </>
                                 ) : (
