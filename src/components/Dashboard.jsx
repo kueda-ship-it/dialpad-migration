@@ -54,6 +54,8 @@ const Dashboard = () => {
     }), [projects, currentMonth]);
 
     const monthlyData = useMemo(() => {
+        const undatedPlanned = projects.filter(p => p.status === '対応予定' && !p.support_date).length;
+        const undatedRow = { month: '未定', completed: 0, planned: undatedPlanned, total: undatedPlanned };
         if (selectedYear !== 'all') {
             // 特定年: 12ヶ月表示
             const mStats = Array.from({ length: 12 }, (_, i) => ({
@@ -69,7 +71,7 @@ const Dashboard = () => {
                 else if (p.status === '対応予定') mStats[idx].planned++;
             });
             mStats.forEach(s => { s.total = s.completed + s.planned; });
-            return mStats;
+            return undatedPlanned > 0 ? [...mStats, undatedRow] : mStats;
         } else {
             // 全期間: 年月ごとに展開し全月表示
             const map = new Map();
@@ -86,9 +88,10 @@ const Dashboard = () => {
                 if (p.status === '対応済')           entry.completed++;
                 else if (p.status === '対応予定') entry.planned++;
             });
-            return Array.from(map.entries())
+            const list = Array.from(map.entries())
                 .sort((a, b) => a[0] - b[0])
                 .map(([, v]) => ({ ...v, total: v.completed + v.planned }));
+            return undatedPlanned > 0 ? [...list, undatedRow] : list;
         }
     }, [projects, selectedYear]);
 
