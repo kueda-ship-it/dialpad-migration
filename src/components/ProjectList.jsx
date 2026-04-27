@@ -928,7 +928,7 @@ const ProjectList = () => {
         setIsDetailModalOpen(true);
     };
 
-    /* support_date 変更時：将来日付 & 未対応 → 対応予定に自動設定 */
+    /* support_date 変更時：将来日付 & 未対応 → 対応予定に自動設定 / クリア時 & 対応予定 → 未対応 */
     const handleSupportDateChange = (project, rawValue) => {
         // 完了済み案件の日付変更時に警告を表示
         if (project.status === '対応済') {
@@ -936,18 +936,29 @@ const ProjectList = () => {
             if (!ok) return;
         }
 
+        // 対応予定の対応日をクリアしようとした場合の確認
+        if (!rawValue && project.status === '対応予定') {
+            const ok = window.confirm('対応予定の対応日をクリアします。ステータスを「未対応」に戻しますか？\n\nOK: 未対応に戻す\nキャンセル: 操作を中止');
+            if (!ok) return;
+        }
+
         const newDate = rawValue.replace(/-/g, '/');
         updateProjectField(project.id, 'support_date', newDate);
-        
+
         // 日付が設定された場合
         if (rawValue) {
             const selected = new Date(rawValue);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            
+
             // 未来日付かつ（未対応または対応済み）の場合、対応予定に自動設定
             if (selected >= today && (project.status === '未対応' || project.status === '対応済')) {
                 updateProjectStatus(project.id, '対応予定');
+            }
+        } else {
+            // 日付がクリアされた場合: 対応予定 → 未対応 に戻す
+            if (project.status === '対応予定') {
+                updateProjectStatus(project.id, '未対応');
             }
         }
     };
