@@ -736,15 +736,46 @@ const ProjectList = () => {
 
     /* ─── CSV Import ── */
     const importFileRef = useRef(null);
+    const parseCSV = (text) => {
+        if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+        const rows = [];
+        let row = [];
+        let cell = '';
+        let inQuotes = false;
+        for (let i = 0; i < text.length; i++) {
+            const ch = text[i];
+            if (inQuotes) {
+                if (ch === '"') {
+                    if (text[i + 1] === '"') { cell += '"'; i++; }
+                    else inQuotes = false;
+                } else {
+                    cell += ch;
+                }
+            } else {
+                if (ch === '"') inQuotes = true;
+                else if (ch === ',') { row.push(cell); cell = ''; }
+                else if (ch === '\n' || ch === '\r') {
+                    if (ch === '\r' && text[i + 1] === '\n') i++;
+                    row.push(cell); cell = '';
+                    if (row.length > 1 || row[0] !== '') rows.push(row);
+                    row = [];
+                } else {
+                    cell += ch;
+                }
+            }
+        }
+        if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+        return rows;
+    };
     const handleImportCSV = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         const text = await file.text();
-        const lines = text.split('\n').filter(l => l.trim());
-        if (lines.length < 2) { alert('データがありません'); return; }
+        const rows = parseCSV(text);
+        if (rows.length < 2) { alert('データがありません'); return; }
         let count = 0;
-        for (let i = 1; i < lines.length; i++) {
-            const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+        for (let i = 1; i < rows.length; i++) {
+            const cols = rows[i].map(c => (c ?? '').trim());
             if (!cols[0]) continue;
             const existing = projects.some(p => p.unit_id === cols[0] || p.id === cols[0]);
             if (existing) continue;
