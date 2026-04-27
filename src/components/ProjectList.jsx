@@ -693,7 +693,11 @@ const ProjectList = () => {
     const filteredProjects = useMemo(() => sortedProjects.filter(p => {
         const t = searchTerm.toLowerCase();
         const matchSearch = p.id?.toLowerCase().includes(t) || p.name?.toLowerCase().includes(t) || p.address?.toLowerCase().includes(t) || p.phone?.includes(t) || (p.maintenance_month?.toString().split(',').map(x => `${x.trim()}月`).join(', ').toLowerCase().includes(t) ?? false);
-        const matchStatus = statusFilter === 'すべて' || p.status === statusFilter;
+        const matchStatus = statusFilter === 'すべて'
+            ? true
+            : statusFilter === '対応済以外'
+                ? p.status !== '対応済'
+                : p.status === statusFilter;
         const matchMaster = masterFilter === 'すべて' || (masterFilter === '未完了' ? !p.master_update_done : p.master_update_done);
         return matchSearch && matchStatus && matchMaster;
     }), [sortedProjects, searchTerm, statusFilter, masterFilter]);
@@ -986,7 +990,7 @@ const ProjectList = () => {
                             </div>
                         </div>
 
-                        <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '未対応', '対応予定', '対応済', 'リスケ']} />
+                        <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '対応済以外', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
 
                         {/* ライセンス数設定（Admin/Manager のみ） */}
