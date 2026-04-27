@@ -767,34 +767,97 @@ const ProjectList = () => {
         if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
         return rows;
     };
+    const [importPreview, setImportPreview] = useState(null);
+    const [importing, setImporting] = useState(false);
+    const buildImportRow = (cols) => {
+        const unit_id = cols[0] || '';
+        const existing = projects.find(p => p.unit_id === unit_id || p.id === unit_id) || null;
+        return {
+            cols,
+            unit_id,
+            name: cols[1] || '',
+            address: cols[2] || '',
+            phone: cols[3] || '',
+            status: ['対応済','対応予定','未対応','リスケ'].includes(cols[4]) ? cols[4] : '未対応',
+            maintenance_month: cols[5] || '',
+            support_date: cols[6] || '',
+            master_update_done: cols[7] === '完了' || cols[7] === 'true',
+            locker_type: cols[8] || '',
+            notes: cols[9] || '',
+            isDuplicate: !!existing,
+            existing,
+            action: existing ? 'skip' : 'add',
+        };
+    };
     const handleImportCSV = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
         const text = await file.text();
         const rows = parseCSV(text);
+        e.target.value = '';
         if (rows.length < 2) { alert('データがありません'); return; }
-        let count = 0;
+        const parsed = [];
         for (let i = 1; i < rows.length; i++) {
             const cols = rows[i].map(c => (c ?? '').trim());
             if (!cols[0]) continue;
-            const existing = projects.some(p => p.unit_id === cols[0] || p.id === cols[0]);
-            if (existing) continue;
-            await addProject({
-                unit_id: cols[0] || '',
-                name: cols[1] || '',
-                address: cols[2] || '',
-                phone: cols[3] || '',
-                status: ['対応済','対応予定','未対応','リスケ'].includes(cols[4]) ? cols[4] : '未対応',
-                maintenance_month: cols[5] || '',
-                support_date: cols[6] || '',
-                master_update_done: cols[7] === '完了' || cols[7] === 'true',
-                locker_type: cols[8] || '',
-                notes: cols[9] || '',
-            });
-            count++;
+            parsed.push(buildImportRow(cols));
         }
-        alert(`${count}件をインポートしました。`);
-        e.target.value = '';
+        if (!parsed.length) { alert('有効なデータ行がありません'); return; }
+        setImportPreview({ fileName: file.name, rows: parsed });
+    };
+    const setImportRowAction = (idx, action) => {
+        setImportPreview(prev => {
+            if (!prev) return prev;
+            const rows = prev.rows.slice();
+            rows[idx] = { ...rows[idx], action };
+            return { ...prev, rows };
+        });
+    };
+    const setAllDuplicatesAction = (action) => {
+        setImportPreview(prev => {
+            if (!prev) return prev;
+            const rows = prev.rows.map(r => r.isDuplicate ? { ...r, action } : r);
+            return { ...prev, rows };
+        });
+    };
+    const executeImport = async () => {
+        if (!importPreview || importing) return;
+        setImporting(true);
+        let added = 0, updated = 0, skipped = 0;
+        try {
+            for (const r of importPreview.rows) {
+                if (r.action === 'skip') { skipped++; continue; }
+                const payload = {
+                    unit_id: r.unit_id,
+                    name: r.name,
+                    address: r.address,
+                    phone: r.phone,
+                    status: r.status,
+                    maintenance_month: r.maintenance_month,
+                    support_date: r.support_date,
+                    master_update_done: r.master_update_done,
+                    locker_type: r.locker_type,
+                    notes: r.notes,
+                };
+                if (r.action === 'overwrite' && r.existing) {
+                    await updateProject({
+                        original_id: r.existing.id,
+                        id: r.unit_id,
+                        ...payload,
+                    });
+                    updated++;
+                } else {
+                    await addProject(payload);
+                    added++;
+                }
+            }
+            setImportPreview(null);
+            alert(`取込完了\n  追加: ${added}件\n  上書: ${updated}件\n  スキップ: ${skipped}件`);
+        } catch (err) {
+            alert(`取込中にエラーが発生しました: ${err.message || err}`);
+        } finally {
+            setImporting(false);
+        }
     };
 
     /* ─── Copy to clipboard ── */
@@ -1663,6 +1726,175 @@ const ProjectList = () => {
                                     <button className="premium-btn-primary w-full" style={{ marginTop: '4px' }} onClick={() => setIsDetailModalOpen(false)}>
                                         CLOSE DETAILS
                                     </button>
+                                </div>
+                            </motion.div>
+                        </div>
+                    );
+                })()}
+            </AnimatePresence>
+            , document.body)}
+
+            {/* ─── CSV Import Preview Modal ─────────────────────────────── */}
+            {createPortal(
+            <AnimatePresence>
+                {importPreview && (() => {
+                    const rows = importPreview.rows;
+                    const dupCount = rows.filter(r => r.isDuplicate).length;
+                    const newCount = rows.length - dupCount;
+                    const overwriteCount = rows.filter(r => r.isDuplicate && r.action === 'overwrite').length;
+                    const skipCount = rows.filter(r => r.action === 'skip').length;
+                    const applyCount = rows.length - skipCount;
+                    return (
+                        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">
+                            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                                className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+                                onClick={() => !importing && setImportPreview(null)} />
+                            <motion.div initial={{ scale: 0.92, opacity: 0, y: 24 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.92, opacity: 0, y: 24 }}
+                                transition={{ duration: 0.28, ease: [0.23, 1, 0.32, 1] }}
+                                className="glass-panel w-full max-w-5xl relative z-[1001]"
+                                style={{ padding: '2rem', display: 'flex', flexDirection: 'column', maxHeight: '85vh' }}>
+
+                                {/* Header */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                                    <div>
+                                        <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#fff', letterSpacing: '-0.02em' }}>
+                                            CSV取込 <span style={{ color: '#3b82f6' }}>プレビュー</span>
+                                        </h2>
+                                        <p style={{ fontSize: '10px', color: 'rgba(255,255,255,0.35)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.18em', marginTop: '6px' }}>
+                                            {importPreview.fileName} — 内容を確認してから取込してください
+                                        </p>
+                                    </div>
+                                    <button className="icon-btn hover:bg-white/10" onClick={() => !importing && setImportPreview(null)} disabled={importing}><X size={18} /></button>
+                                </div>
+
+                                {/* Summary chips */}
+                                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '1rem' }}>
+                                    <div style={{ padding: '8px 14px', borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.85)' }}>
+                                        合計 <span style={{ color: '#fff', fontSize: '14px' }}>{rows.length}</span> 件
+                                    </div>
+                                    <div style={{ padding: '8px 14px', borderRadius: '10px', background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.3)', fontSize: '12px', fontWeight: 700, color: '#10b981' }}>
+                                        新規 <span style={{ fontSize: '14px' }}>{newCount}</span> 件
+                                    </div>
+                                    <div style={{ padding: '8px 14px', borderRadius: '10px', background: dupCount ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.03)', border: dupCount ? '1px solid rgba(245,158,11,0.4)' : '1px solid rgba(255,255,255,0.08)', fontSize: '12px', fontWeight: 700, color: dupCount ? '#f59e0b' : 'rgba(255,255,255,0.4)' }}>
+                                        重複 <span style={{ fontSize: '14px' }}>{dupCount}</span> 件
+                                    </div>
+                                    {dupCount > 0 && (
+                                        <div style={{ padding: '8px 14px', borderRadius: '10px', background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.3)', fontSize: '12px', fontWeight: 700, color: '#60a5fa' }}>
+                                            上書 {overwriteCount} / スキップ {skipCount}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Bulk actions for duplicates */}
+                                {dupCount > 0 && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px', padding: '10px 14px', background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: '10px' }}>
+                                        <Info size={14} style={{ color: '#f59e0b', flexShrink: 0 }} />
+                                        <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.85)', fontWeight: 600 }}>
+                                            号機IDが既存と重複する行があります。一括で:
+                                        </span>
+                                        <button onClick={() => setAllDuplicatesAction('overwrite')} disabled={importing}
+                                            style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, borderRadius: '8px', background: 'rgba(59,130,246,0.18)', border: '1px solid rgba(59,130,246,0.4)', color: '#60a5fa', cursor: importing ? 'not-allowed' : 'pointer' }}>
+                                            全て上書き
+                                        </button>
+                                        <button onClick={() => setAllDuplicatesAction('skip')} disabled={importing}
+                                            style={{ padding: '6px 12px', fontSize: '11px', fontWeight: 700, borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.7)', cursor: importing ? 'not-allowed' : 'pointer' }}>
+                                            全てスキップ
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Row list */}
+                                <div style={{ flex: 1, overflowY: 'auto', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', background: 'rgba(0,0,0,0.2)' }}>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '110px 110px 1fr 120px 120px 200px', gap: '10px', padding: '10px 14px', position: 'sticky', top: 0, background: 'rgba(20,20,30,0.95)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(255,255,255,0.08)', fontSize: '10px', fontWeight: 800, color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.12em' }}>
+                                        <div>状態</div>
+                                        <div>号機ID</div>
+                                        <div>物件名</div>
+                                        <div>メンテ月</div>
+                                        <div>ステータス</div>
+                                        <div style={{ textAlign: 'right' }}>処理</div>
+                                    </div>
+                                    {rows.map((r, idx) => {
+                                        const sc = STATUS_COLORS[r.status] || STATUS_COLORS['未対応'];
+                                        const skipping = r.action === 'skip';
+                                        return (
+                                            <div key={idx} style={{
+                                                display: 'grid', gridTemplateColumns: '110px 110px 1fr 120px 120px 200px', gap: '10px',
+                                                padding: '10px 14px', alignItems: 'center',
+                                                borderBottom: '1px solid rgba(255,255,255,0.04)',
+                                                opacity: skipping ? 0.45 : 1,
+                                                background: r.isDuplicate ? 'rgba(245,158,11,0.04)' : 'transparent',
+                                            }}>
+                                                <div>
+                                                    {r.isDuplicate ? (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: 24, padding: '0 8px', fontSize: '10px', fontWeight: 800, borderRadius: '6px', background: 'rgba(245,158,11,0.15)', color: '#f59e0b', border: '1px solid rgba(245,158,11,0.35)', lineHeight: 1 }}>
+                                                            重複
+                                                        </span>
+                                                    ) : (
+                                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: 24, padding: '0 8px', fontSize: '10px', fontWeight: 800, borderRadius: '6px', background: 'rgba(16,185,129,0.13)', color: '#10b981', border: '1px solid rgba(16,185,129,0.35)', lineHeight: 1 }}>
+                                                            新規
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div style={{ fontSize: '12px', fontWeight: 700, color: '#fff', fontFamily: 'monospace' }}>{r.unit_id}</div>
+                                                <div style={{ fontSize: '12px', fontWeight: 600, color: 'rgba(255,255,255,0.85)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={r.name}>{r.name || <span style={{ color: 'rgba(255,255,255,0.3)' }}>—</span>}</div>
+                                                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>{r.maintenance_month || '—'}</div>
+                                                <div>
+                                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', height: 24, padding: '0 8px', fontSize: '10px', fontWeight: 700, borderRadius: '6px', background: sc.bg, color: sc.text, border: `1px solid ${sc.border}`, lineHeight: 1 }}>
+                                                        <span style={{ width: 6, height: 6, borderRadius: '50%', background: sc.dot }} />
+                                                        {r.status}
+                                                    </span>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                                    {r.isDuplicate ? (
+                                                        <>
+                                                            <button onClick={() => setImportRowAction(idx, 'overwrite')} disabled={importing}
+                                                                style={{ padding: '5px 10px', fontSize: '10px', fontWeight: 800, borderRadius: '6px',
+                                                                    background: r.action === 'overwrite' ? 'rgba(59,130,246,0.25)' : 'rgba(255,255,255,0.03)',
+                                                                    border: r.action === 'overwrite' ? '1px solid rgba(59,130,246,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                                                                    color: r.action === 'overwrite' ? '#60a5fa' : 'rgba(255,255,255,0.55)',
+                                                                    cursor: importing ? 'not-allowed' : 'pointer' }}>
+                                                                上書き
+                                                            </button>
+                                                            <button onClick={() => setImportRowAction(idx, 'skip')} disabled={importing}
+                                                                style={{ padding: '5px 10px', fontSize: '10px', fontWeight: 800, borderRadius: '6px',
+                                                                    background: r.action === 'skip' ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.03)',
+                                                                    border: r.action === 'skip' ? '1px solid rgba(255,255,255,0.25)' : '1px solid rgba(255,255,255,0.1)',
+                                                                    color: r.action === 'skip' ? '#fff' : 'rgba(255,255,255,0.55)',
+                                                                    cursor: importing ? 'not-allowed' : 'pointer' }}>
+                                                                スキップ
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(16,185,129,0.7)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>追加</span>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+
+                                {/* Footer */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.25rem', gap: '12px' }}>
+                                    <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.6)', fontWeight: 600 }}>
+                                        実行: <span style={{ color: '#fff', fontWeight: 800 }}>{applyCount}</span> 件
+                                        <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 8px' }}>·</span>
+                                        新規 <span style={{ color: '#10b981', fontWeight: 800 }}>{newCount}</span>
+                                        <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 8px' }}>·</span>
+                                        上書 <span style={{ color: '#60a5fa', fontWeight: 800 }}>{overwriteCount}</span>
+                                        <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 8px' }}>·</span>
+                                        スキップ <span style={{ color: 'rgba(255,255,255,0.5)', fontWeight: 800 }}>{skipCount}</span>
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                        <button onClick={() => setImportPreview(null)} disabled={importing}
+                                            style={{ padding: '10px 20px', fontSize: '12px', fontWeight: 800, borderRadius: '10px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.85)', cursor: importing ? 'not-allowed' : 'pointer' }}>
+                                            キャンセル
+                                        </button>
+                                        <button onClick={executeImport} disabled={importing || applyCount === 0}
+                                            className="premium-btn-primary"
+                                            style={{ padding: '10px 24px', fontSize: '12px', fontWeight: 800, opacity: (importing || applyCount === 0) ? 0.5 : 1, cursor: (importing || applyCount === 0) ? 'not-allowed' : 'pointer' }}>
+                                            {importing ? '取込中...' : `${applyCount}件を取込`}
+                                        </button>
+                                    </div>
                                 </div>
                             </motion.div>
                         </div>
