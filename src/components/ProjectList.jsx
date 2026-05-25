@@ -147,7 +147,11 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
 };
 
 /* ─── InlineDatePicker ────────────────────────────────────────────────────── */
-const InlineDatePicker = ({ project, canInlineEdit, onDateChange, field = 'support_date', icon: IconComp = Calendar, useStatusColor = true, placeholder = '未設定', accentColor = null }) => {
+const WARNING_COLOR_MAP = {
+    overdue: { bg: 'rgba(239,68,68,0.14)', border: 'rgba(239,68,68,0.55)', text: '#ef4444' },
+    warn:    { bg: 'rgba(245,158,11,0.1)',  border: 'rgba(245,158,11,0.45)', text: '#f59e0b' },
+};
+const InlineDatePicker = ({ project, canInlineEdit, onDateChange, field = 'support_date', icon: IconComp = Calendar, useStatusColor = true, placeholder = '未設定', accentColor = null, warningLevel = null, warningPlaceholder = null }) => {
     const [showPicker, setShowPicker] = useState(false);
     const [pickerPos, setPickerPos] = useState({ top: undefined, bottom: undefined, left: 0 });
     const btnRef = useRef(null);
@@ -158,6 +162,14 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange, field = 'suppo
         : (accentColor
             ? { bg: accentColor.bg, border: accentColor.border, text: accentColor.text }
             : { bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.35)', text: 'rgba(255,255,255,0.85)' });
+    // 値が空のとき限定で警告色を適用
+    const wc = !value && warningLevel ? WARNING_COLOR_MAP[warningLevel] : null;
+    const effectiveBg = wc ? wc.bg : (value ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)');
+    const effectiveBorder = wc ? wc.border : (value ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)');
+    const effectiveIconColor = wc ? wc.text : (sc.text || 'var(--primary)');
+    const effectiveIconOpacity = value ? 0.65 : (wc ? 0.9 : 0.25);
+    const placeholderColor = wc ? wc.text : 'rgba(255,255,255,0.15)';
+    const placeholderText = wc ? (warningPlaceholder || placeholder) : placeholder;
 
     const openPicker = () => {
         if (!canInlineEdit) return;
@@ -203,21 +215,21 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange, field = 'suppo
                 style={{
                     minWidth: 160,
                     padding: '0 8px 0 12px',
-                    background: value ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${value ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)'}`,
+                    background: effectiveBg,
+                    border: `1px solid ${effectiveBorder}`,
                     cursor: canInlineEdit ? 'pointer' : 'default',
                 }}
                 onClick={openPicker}
             >
                 <IconComp
                     size={14}
-                    style={{ color: sc.text || 'var(--primary)', opacity: value ? 0.65 : 0.25 }}
+                    style={{ color: effectiveIconColor, opacity: effectiveIconOpacity }}
                     className="flex-shrink-0"
                 />
                 <span className="text-[12px] font-bold flex-1 text-left truncate" style={{ color: sc.text || '#fff' }}>
                     {value
                         ? value.replace(/\//g, '-')
-                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '13px' }}>{placeholder}</span>}
+                        : <span style={{ color: placeholderColor, fontWeight: wc ? 700 : 400, fontSize: '13px' }}>{placeholderText}</span>}
                 </span>
                 {canInlineEdit && value && (
                     <button
@@ -268,6 +280,17 @@ const ProjectRow = React.memo(({
     const rowClass =
         project.status === '対応済' ? 'row-completed' :
             project.status === '対応予定' ? 'row-planned' : '';
+
+    // 電話休止日の警告レベル: 対応済かつ対応日ありで未休止のとき、対応日+1ヶ月で赤、それまで黄
+    const lineSuspendWarning = (() => {
+        if (project.line_suspended_date) return null;
+        if (project.status !== '対応済' || !project.support_date) return null;
+        const sd = new Date(project.support_date.replace(/-/g, '/'));
+        if (isNaN(sd)) return null;
+        const deadline = new Date(sd);
+        deadline.setMonth(deadline.getMonth() + 1);
+        return new Date() >= deadline ? 'overdue' : 'warn';
+    })();
 
     const [masterWarnPos, setMasterWarnPos] = useState(null);
     const masterBtnRef = useRef(null);
@@ -460,6 +483,8 @@ const ProjectRow = React.memo(({
                             border: 'rgba(244,114,182,0.35)',
                             text: '#f472b6',
                         }}
+                        warningLevel={lineSuspendWarning}
+                        warningPlaceholder={lineSuspendWarning === 'overdue' ? '⚠ 1ヶ月超過' : '⚠ 未休止'}
                     />
                 </div>
             </td>
