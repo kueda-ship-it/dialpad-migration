@@ -638,6 +638,7 @@ const ProjectList = () => {
     const canInlineEdit = !isViewOnly && !isEditor;
     const [statusFilter, setStatusFilter] = useState('すべて');
     const [masterFilter, setMasterFilter] = useState('すべて');
+    const [lineSuspendedFilter, setLineSuspendedFilter] = useState('すべて');
     const [sortConfig, setSortConfig] = useState(() => {
         try { const s = localStorage.getItem('dm_sort_config'); return s ? JSON.parse(s) : { key: 'id', direction: 'asc' }; } catch { return { key: 'id', direction: 'asc' }; }
     });
@@ -758,8 +759,13 @@ const ProjectList = () => {
                 ? p.status !== '対応済'
                 : p.status === statusFilter;
         const matchMaster = masterFilter === 'すべて' || (masterFilter === '未完了' ? !p.master_update_done : p.master_update_done);
-        return matchSearch && matchStatus && matchMaster;
-    }), [sortedProjects, searchTerm, statusFilter, masterFilter]);
+        const matchLineSuspended = lineSuspendedFilter === 'すべて'
+            ? true
+            : lineSuspendedFilter === '休止済'
+                ? !!p.line_suspended_date
+                : !p.line_suspended_date;
+        return matchSearch && matchStatus && matchMaster && matchLineSuspended;
+    }), [sortedProjects, searchTerm, statusFilter, masterFilter, lineSuspendedFilter]);
 
     /* ─── License stats ── */
     const masterDoneCount = useMemo(() => projects.filter(p => p.master_update_done).length, [projects]);
@@ -777,7 +783,7 @@ const ProjectList = () => {
     }, [filteredProjects, currentPage, isShowingAll]);
 
     // フィルター変更時はページ1に戻す
-    React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, masterFilter]);
+    React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, masterFilter, lineSuspendedFilter]);
 
     /* ─── CSV Export ── */
     const exportCSV = () => {
@@ -1072,6 +1078,7 @@ const ProjectList = () => {
 
                         <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '対応済以外', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
+                        <GlassDropdown labelPrefix="LINE: " value={lineSuspendedFilter} onChange={setLineSuspendedFilter} options={['すべて', '未休止', '休止済']} />
 
                         {/* ライセンス数設定（Admin/Manager のみ） */}
                         {!isViewOnly && (
