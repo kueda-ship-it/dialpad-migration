@@ -6,7 +6,7 @@ import {
     Search, Calendar, FileCheck,
     Check, Plus, X, ArrowUpDown, ArrowUp, ArrowDown, Edit, Info, ChevronDown, Trash2,
     MapPin, Hash, Cpu, CalendarDays, ShieldCheck, Settings2,
-    Copy, Download, Upload, Minus, ChevronLeft, ChevronRight
+    Copy, Download, Upload, Minus, ChevronLeft, ChevronRight, PhoneOff
 } from 'lucide-react';
 
 /* ─── ステータスカラー定義（システム共通） ──────────────────────────────── */
@@ -147,11 +147,17 @@ const MiniCalendar = ({ value, onChange, onClear }) => {
 };
 
 /* ─── InlineDatePicker ────────────────────────────────────────────────────── */
-const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
+const InlineDatePicker = ({ project, canInlineEdit, onDateChange, field = 'support_date', icon: IconComp = Calendar, useStatusColor = true, placeholder = '未設定', accentColor = null }) => {
     const [showPicker, setShowPicker] = useState(false);
     const [pickerPos, setPickerPos] = useState({ top: undefined, bottom: undefined, left: 0 });
     const btnRef = useRef(null);
-    const sc = STATUS_COLORS[project.status] || {};
+    const statusSc = STATUS_COLORS[project.status] || {};
+    const value = project[field];
+    const sc = useStatusColor
+        ? statusSc
+        : (accentColor
+            ? { bg: accentColor.bg, border: accentColor.border, text: accentColor.text }
+            : { bg: 'rgba(100,116,139,0.1)', border: 'rgba(100,116,139,0.35)', text: 'rgba(255,255,255,0.85)' });
 
     const openPicker = () => {
         if (!canInlineEdit) return;
@@ -197,23 +203,23 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
                 style={{
                     minWidth: 160,
                     padding: '0 8px 0 12px',
-                    background: project.support_date ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)',
-                    border: `1px solid ${project.support_date ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)'}`,
+                    background: value ? (sc.bg || 'rgba(255,255,255,0.04)') : 'rgba(255,255,255,0.02)',
+                    border: `1px solid ${value ? (sc.border || 'rgba(255,255,255,0.12)') : 'rgba(255,255,255,0.07)'}`,
                     cursor: canInlineEdit ? 'pointer' : 'default',
                 }}
                 onClick={openPicker}
             >
-                <Calendar
+                <IconComp
                     size={14}
-                    style={{ color: sc.text || 'var(--primary)', opacity: project.support_date ? 0.65 : 0.25 }}
+                    style={{ color: sc.text || 'var(--primary)', opacity: value ? 0.65 : 0.25 }}
                     className="flex-shrink-0"
                 />
                 <span className="text-[12px] font-bold flex-1 text-left truncate" style={{ color: sc.text || '#fff' }}>
-                    {project.support_date
-                        ? project.support_date.replace(/\//g, '-')
-                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '13px' }}>未設定</span>}
+                    {value
+                        ? value.replace(/\//g, '-')
+                        : <span style={{ color: 'rgba(255,255,255,0.15)', fontWeight: 400, fontSize: '13px' }}>{placeholder}</span>}
                 </span>
-                {canInlineEdit && project.support_date && (
+                {canInlineEdit && value && (
                     <button
                         type="button"
                         onPointerDown={handleXBtn}
@@ -241,7 +247,7 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
                     onMouseDown={(e) => e.stopPropagation()}
                 >
                     <MiniCalendar
-                        value={project.support_date}
+                        value={value}
                         onChange={(ds) => { onDateChange(project, ds); setShowPicker(false); }}
                         onClear={clearDate}
                     />
@@ -255,7 +261,7 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange }) => {
 /* ─── ProjectRow (Memoized) ──────────────────────────────────────────────── */
 const ProjectRow = React.memo(({
     project, isSelected, toggleSelection,
-    updateProjectStatus, handleSupportDateChange, toggleMasterUpdate,
+    updateProjectStatus, handleSupportDateChange, handleLineSuspendedDateChange, toggleMasterUpdate,
     openEditModal, openDetailModal,
     copyToClipboard, copiedId, isViewOnly, canInlineEdit
 }) => {
@@ -438,6 +444,24 @@ const ProjectRow = React.memo(({
                     </div>,
                     document.body
                 )}
+            </td>
+            <td className="px-4 py-0.5 text-center align-middle">
+                <div className="flex justify-center">
+                    <InlineDatePicker
+                        project={project}
+                        canInlineEdit={canInlineEdit}
+                        onDateChange={handleLineSuspendedDateChange}
+                        field="line_suspended_date"
+                        icon={PhoneOff}
+                        useStatusColor={false}
+                        placeholder="未休止"
+                        accentColor={{
+                            bg: 'rgba(244,114,182,0.08)',
+                            border: 'rgba(244,114,182,0.35)',
+                            text: '#f472b6',
+                        }}
+                    />
+                </div>
             </td>
             <td className="px-4 py-0.5 align-middle">
                 <div className="flex items-center justify-end gap-2">
@@ -643,12 +667,13 @@ const ProjectList = () => {
         program_version: '',
         status: '未対応',
         support_date: '',
+        line_suspended_date: '',
         master_update_done: false
     });
     const [detailProject, setDetailProject] = useState(null);
 
     /* ─── New project form ── */
-    const emptyNew = { unit_id: '', name: '', phone: '', locker_type: '', maintenance_month: '', status: '未対応', support_date: '', master_update_done: false };
+    const emptyNew = { unit_id: '', name: '', phone: '', locker_type: '', maintenance_month: '', status: '未対応', support_date: '', line_suspended_date: '', master_update_done: false };
     const [newProject, setNewProject] = useState(emptyNew);
 
     /* ─── Sort ── */
@@ -671,6 +696,11 @@ const ProjectList = () => {
             if (sortConfig.key === 'support_date') {
                 const dA = a.support_date ? new Date(a.support_date.replace(/-/g, '/')) : new Date(0);
                 const dB = b.support_date ? new Date(b.support_date.replace(/-/g, '/')) : new Date(0);
+                return sortConfig.direction === 'asc' ? dA - dB : dB - dA;
+            }
+            if (sortConfig.key === 'line_suspended_date') {
+                const dA = a.line_suspended_date ? new Date(a.line_suspended_date.replace(/-/g, '/')) : new Date(0);
+                const dB = b.line_suspended_date ? new Date(b.line_suspended_date.replace(/-/g, '/')) : new Date(0);
                 return sortConfig.direction === 'asc' ? dA - dB : dB - dA;
             }
             if (sortConfig.key === 'master_update_done') {
@@ -727,12 +757,13 @@ const ProjectList = () => {
     /* ─── CSV Export ── */
     const exportCSV = () => {
         const BOM = '﻿';
-        const headers = ['号機ID', '物件名', '住所', '電話番号', 'ステータス', 'メンテ月', '対応日', 'マスタ更新', 'ロッカータイプ', '備考'];
+        const headers = ['号機ID', '物件名', '住所', '電話番号', 'ステータス', 'メンテ月', '対応日', 'マスタ更新', 'ロッカータイプ', '備考', '電話休止日'];
         const rows = filteredProjects.map(p => [
             p.id, p.name, p.address || '', p.phone || '',
             p.status || '', p.maintenance_month || '', p.support_date || '',
             p.master_update_done ? '完了' : '未完了',
             p.locker_type || '', p.notes || '',
+            p.line_suspended_date || '',
         ]);
         const csv = BOM + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -792,6 +823,7 @@ const ProjectList = () => {
             master_update_done: cols[7] === '完了' || cols[7] === 'true',
             locker_type: cols[8] || '',
             notes: cols[9] || '',
+            line_suspended_date: cols[10] || '',
             isDuplicate: !!existing,
             existing,
             action: existing ? 'skip' : 'add',
@@ -843,6 +875,7 @@ const ProjectList = () => {
                     status: r.status,
                     maintenance_month: r.maintenance_month,
                     support_date: r.support_date,
+                    line_suspended_date: r.line_suspended_date,
                     master_update_done: r.master_update_done,
                     locker_type: r.locker_type,
                     notes: r.notes,
@@ -918,6 +951,7 @@ const ProjectList = () => {
             program_version: project.program_version || '',
             status: project.status || '未対応',
             support_date: project.support_date || '',
+            line_suspended_date: project.line_suspended_date || '',
             master_update_done: !!project.master_update_done
         });
         setIsEditModalOpen(true);
@@ -926,6 +960,12 @@ const ProjectList = () => {
     const openDetailModal = (project) => {
         setDetailProject(project);
         setIsDetailModalOpen(true);
+    };
+
+    /* 電話休止日変更時：シンプルに保存 */
+    const handleLineSuspendedDateChange = (project, rawValue) => {
+        const newDate = rawValue ? rawValue.replace(/-/g, '/') : '';
+        updateProjectField(project.id, 'line_suspended_date', newDate);
     };
 
     /* support_date 変更時：将来日付 & 未対応 → 対応予定に自動設定 / クリア時 & 対応予定 → 未対応 */
@@ -1175,6 +1215,9 @@ const ProjectList = () => {
                                         <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }}>
                                             マスタ更新
                                         </th>
+                                        <th className="px-4 py-6 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('line_suspended_date')}>
+                                            電話休止日 <SortIcon columnKey="line_suspended_date" sortConfig={sortConfig} />
+                                        </th>
                                         <th className="px-4 py-8 border-b border-white/[0.08] align-middle" style={{ verticalAlign: 'middle' }} />
                                     </tr>
                                 </thead>
@@ -1187,6 +1230,7 @@ const ProjectList = () => {
                                             toggleSelection={toggleSelection}
                                             updateProjectStatus={updateProjectStatus}
                                             handleSupportDateChange={handleSupportDateChange}
+                                            handleLineSuspendedDateChange={handleLineSuspendedDateChange}
                                             toggleMasterUpdate={toggleMasterUpdate}
                                             openEditModal={openEditModal}
                                             openDetailModal={openDetailModal}
@@ -1452,6 +1496,14 @@ const ProjectList = () => {
                                                 </span>
                                             </div>
                                         </Field>
+                                        <Field label="電話休止日">
+                                            <input
+                                                type="date"
+                                                style={{ ...inputStyle, colorScheme: 'dark' }}
+                                                value={newProject.line_suspended_date}
+                                                onChange={e => setNewProject({ ...newProject, line_suspended_date: e.target.value })}
+                                            />
+                                        </Field>
                                     </div>
                                 </div>
 
@@ -1477,6 +1529,7 @@ const ProjectList = () => {
                     const safeLockerType = ep?.locker_type ?? '';
                     const safeStatus = ep?.status ?? '未対応';
                     const safeSupportDate = ep?.support_date ? String(ep.support_date).replace(/\//g, '-') : '';
+                    const safeLineSuspendedDate = ep?.line_suspended_date ? String(ep.line_suspended_date).replace(/\//g, '-') : '';
                     const safeProgramVersion = ep?.program_version ?? '';
                     const safeMaintenanceMonth = ep?.maintenance_month ?? '';
 
@@ -1586,6 +1639,17 @@ const ProjectList = () => {
                                                     style={{ ...inputStyle, colorScheme: 'dark' }}
                                                     value={safeSupportDate}
                                                     onChange={e => setEditingProject({ ...ep, support_date: e.target.value.replace(/-/g, '/') })}
+                                                />
+                                            </Field>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <Field label="電話休止日">
+                                                <input
+                                                    type="date"
+                                                    style={{ ...inputStyle, colorScheme: 'dark' }}
+                                                    value={safeLineSuspendedDate}
+                                                    onChange={e => setEditingProject({ ...ep, line_suspended_date: e.target.value.replace(/-/g, '/') })}
                                                 />
                                             </Field>
                                         </div>
@@ -1716,6 +1780,13 @@ const ProjectList = () => {
                                         <div>
                                             <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>メンテ月</label>
                                             <p style={{ fontSize: '12px', fontWeight: 700, color: 'rgba(255,255,255,0.6)', marginTop: '6px' }}>{formatMaintenanceMonth(dp.maintenance_month)}</p>
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '9px', fontWeight: 800, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase', letterSpacing: '0.16em' }}>電話休止日</label>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                                                <PhoneOff size={13} style={{ color: dp.line_suspended_date ? '#f472b6' : 'rgba(255,255,255,0.25)' }} />
+                                                <p style={{ fontSize: '12px', fontWeight: 800, fontFamily: 'Outfit, monospace', color: dp.line_suspended_date ? '#f472b6' : 'rgba(255,255,255,0.4)' }}>{dp.line_suspended_date || '未休止'}</p>
+                                            </div>
                                         </div>
                                     </div>
 
