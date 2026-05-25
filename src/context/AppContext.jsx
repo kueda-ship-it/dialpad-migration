@@ -412,6 +412,7 @@ export const AppProvider = ({ children }) => {
             line_type: newProj.line_type || '',
             status: newStatus,
             support_date: newProj.support_date ? newProj.support_date.replace(/\//g, '-') : null,
+            line_suspended_date: newProj.line_suspended_date ? newProj.line_suspended_date.replace(/\//g, '-') : null,
             master_update_done: newProj.master_update_done || false,
         }]);
     };
@@ -443,7 +444,7 @@ export const AppProvider = ({ children }) => {
         let dbValue = value;
         let dbField = field;
         
-        if (field === 'support_date') {
+        if (field === 'support_date' || field === 'line_suspended_date') {
             dbValue = value ? value.replace(/\//g, '-') : null;
         } else if (field === 'phone') {
             dbField = 'phone_number';
@@ -478,6 +479,7 @@ export const AppProvider = ({ children }) => {
             line_type: updatedProject.line_type || '',
             status: updatedProject.status,
             support_date: updatedProject.support_date ? updatedProject.support_date.replace(/\//g, '-') : null,
+            line_suspended_date: updatedProject.line_suspended_date ? updatedProject.line_suspended_date.replace(/\//g, '-') : null,
             master_update_done: updatedProject.master_update_done || false,
         };
 
