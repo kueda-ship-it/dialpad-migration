@@ -212,8 +212,8 @@ export const AppProvider = ({ children }) => {
     }, []);
 
     // Fetch projects from Supabase
-    const fetchProjects = useCallback(async () => {
-        setLoading(true);
+    const fetchProjects = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setLoading(true);
         try {
             const { data, error } = await supabase
                 .from('projects')
@@ -240,7 +240,7 @@ export const AppProvider = ({ children }) => {
             const savedProjects = localStorage.getItem('dialpad_projects');
             setProjects(savedProjects ? JSON.parse(savedProjects) : MOCK_PROJECTS);
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     }, [formatProject]);
 
@@ -272,12 +272,29 @@ export const AppProvider = ({ children }) => {
             })
             .subscribe((status) => {
                 console.log('Projects realtime subscription status:', status);
+                // 再接続(SUBSCRIBED)時は切断中の取りこぼしを補正するため再フェッチ
+                if (status === 'SUBSCRIBED') {
+                    fetchProjects({ silent: true });
+                }
             });
 
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [formatProject]);
+    }, [formatProject, fetchProjects]);
+
+    // タブ復帰/ネットワーク復帰時に realtime の取りこぼしを補正
+    useEffect(() => {
+        const resync = () => {
+            if (document.visibilityState === 'visible') fetchProjects({ silent: true });
+        };
+        document.addEventListener('visibilitychange', resync);
+        window.addEventListener('online', resync);
+        return () => {
+            document.removeEventListener('visibilitychange', resync);
+            window.removeEventListener('online', resync);
+        };
+    }, [fetchProjects]);
 
     useEffect(() => {
         if (!authLoading) {
