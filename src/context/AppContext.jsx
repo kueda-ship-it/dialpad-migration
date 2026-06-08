@@ -245,43 +245,57 @@ export const AppProvider = ({ children }) => {
     }, [formatProject]);
 
     // Real-time subscription for projects table
+    // RLS(authenticated限定)下では JWT 認証済みで購読しないと postgres_changes が配信されないため、
+    // user 確定後に realtime.setAuth してから購読する
     useEffect(() => {
-        console.log('Subscribing to projects realtime changes...');
-        const channel = supabase
-            .channel('projects_table_changes')
-            .on('postgres_changes', { 
-                event: '*', 
-                schema: 'public', 
-                table: 'projects' 
-            }, payload => {
-                console.log('Realtime project change received:', payload.eventType, payload);
-                if (payload.eventType === 'INSERT') {
-                    const newProj = formatProject(payload.new);
-                    setProjects(prev => {
-                        // Check if already exists (optimistic update handle)
-                        if (prev.some(p => p.uuid === newProj.uuid || p.id === newProj.id)) return prev;
-                        return [newProj, ...prev];
-                    });
-                } else if (payload.eventType === 'UPDATE') {
-                    const updated = formatProject(payload.new);
-                    setProjects(prev => prev.map(p => (p.uuid === updated.uuid || p.id === updated.id) ? updated : p));
-                } else if (payload.eventType === 'DELETE') {
-                    // Use payload.old.id (UUID) as it's guaranteed in REPLICA IDENTITY FULL or PK
-                    setProjects(prev => prev.filter(p => p.uuid !== payload.old.id && p.id !== payload.old.id));
-                }
-            })
-            .subscribe((status) => {
-                console.log('Projects realtime subscription status:', status);
-                // 再接続(SUBSCRIBED)時は切断中の取りこぼしを補正するため再フェッチ
-                if (status === 'SUBSCRIBED') {
-                    fetchProjects({ silent: true });
-                }
-            });
+        if (!user) return;
+        let channel = null;
+        let cancelled = false;
+
+        (async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (cancelled) return;
+            if (session?.access_token) {
+                supabase.realtime.setAuth(session.access_token);
+            }
+
+            channel = supabase
+                .channel('projects_table_changes')
+                .on('postgres_changes', {
+                    event: '*',
+                    schema: 'public',
+                    table: 'projects'
+                }, payload => {
+                    console.log('Realtime project change received:', payload.eventType, payload);
+                    if (payload.eventType === 'INSERT') {
+                        const newProj = formatProject(payload.new);
+                        setProjects(prev => {
+                            // Check if already exists (optimistic update handle)
+                            if (prev.some(p => p.uuid === newProj.uuid || p.id === newProj.id)) return prev;
+                            return [newProj, ...prev];
+                        });
+                    } else if (payload.eventType === 'UPDATE') {
+                        const updated = formatProject(payload.new);
+                        setProjects(prev => prev.map(p => (p.uuid === updated.uuid || p.id === updated.id) ? updated : p));
+                    } else if (payload.eventType === 'DELETE') {
+                        // Use payload.old.id (UUID) as it's guaranteed in REPLICA IDENTITY FULL or PK
+                        setProjects(prev => prev.filter(p => p.uuid !== payload.old.id && p.id !== payload.old.id));
+                    }
+                })
+                .subscribe((status) => {
+                    console.log('Projects realtime subscription status:', status);
+                    // 再接続(SUBSCRIBED)時は切断中の取りこぼしを補正するため再フェッチ
+                    if (status === 'SUBSCRIBED') {
+                        fetchProjects({ silent: true });
+                    }
+                });
+        })();
 
         return () => {
-            supabase.removeChannel(channel);
+            cancelled = true;
+            if (channel) supabase.removeChannel(channel);
         };
-    }, [formatProject, fetchProjects]);
+    }, [formatProject, fetchProjects, user]);
 
     // タブ復帰/ネットワーク復帰時に realtime の取りこぼしを補正
     useEffect(() => {
