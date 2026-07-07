@@ -16,6 +16,26 @@ export const STATUS_COLORS = {
     reschedule: '#ef4444', /* リスケ   レッド */
 };
 
+const ChartTooltip = ({ active, payload, label }) => {
+    if (!active || !payload || !payload.length) return null;
+    const d = payload[0].payload;
+    const rows = [
+        { name: '完了',     value: d.completed, color: STATUS_COLORS.done },
+        { name: '対応予定', value: d.planned,   color: STATUS_COLORS.planned },
+    ];
+    return (
+        <div style={{ background: 'rgba(10,15,25,0.96)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', backdropFilter: 'blur(24px)', padding: '10px 14px' }}>
+            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: '6px' }}>{label}</p>
+            {rows.map(r => (
+                <p key={r.name} style={{ color: '#f8fafc', fontSize: '12px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', margin: '2px 0' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: r.color, display: 'inline-block' }} />
+                    {r.name} : {r.value}件
+                </p>
+            ))}
+        </div>
+    );
+};
+
 const Dashboard = () => {
     const { projects } = useApp();
     const [chartType, setChartType] = useState('bar');
@@ -54,8 +74,6 @@ const Dashboard = () => {
     }), [projects, currentMonth]);
 
     const monthlyData = useMemo(() => {
-        const undatedPlanned = projects.filter(p => p.status === '対応予定' && !p.support_date).length;
-        const undatedRow = { month: '未定', completed: 0, planned: undatedPlanned, total: undatedPlanned };
         if (selectedYear !== 'all') {
             // 特定年: 12ヶ月表示
             const mStats = Array.from({ length: 12 }, (_, i) => ({
@@ -71,7 +89,7 @@ const Dashboard = () => {
                 else if (p.status === '対応予定') mStats[idx].planned++;
             });
             mStats.forEach(s => { s.total = s.completed + s.planned; });
-            return undatedPlanned > 0 ? [...mStats, undatedRow] : mStats;
+            return mStats;
         } else {
             // 全期間: 年月ごとに展開し全月表示
             const map = new Map();
@@ -88,10 +106,9 @@ const Dashboard = () => {
                 if (p.status === '対応済')           entry.completed++;
                 else if (p.status === '対応予定') entry.planned++;
             });
-            const list = Array.from(map.entries())
+            return Array.from(map.entries())
                 .sort((a, b) => a[0] - b[0])
                 .map(([, v]) => ({ ...v, total: v.completed + v.planned }));
-            return undatedPlanned > 0 ? [...list, undatedRow] : list;
         }
     }, [projects, selectedYear]);
 
@@ -199,15 +216,33 @@ const Dashboard = () => {
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                                 <XAxis dataKey="month" stroke="rgba(255,255,255,0.15)" fontSize={11} tickLine={false} axisLine={false} fontWeight={700} />
                                 <YAxis stroke="rgba(255,255,255,0.15)" fontSize={11} tickLine={false} axisLine={false} fontWeight={700} />
-                                <Tooltip
-                                    contentStyle={{ background: 'rgba(10,15,25,0.96)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '14px', boxShadow: '0 20px 50px rgba(0,0,0,0.6)', backdropFilter: 'blur(24px)' }}
-                                    itemStyle={{ color: '#f8fafc', fontSize: '12px', fontWeight: 700 }}
-                                    labelStyle={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: 800, letterSpacing: '0.12em', textTransform: 'uppercase' }}
-                                />
+                                <Tooltip content={<ChartTooltip />} />
                                 {chartType === 'bar' ? (
                                     <>
-                                        <Bar dataKey="completed" stackId="a" fill={STATUS_COLORS.done}    name="完了"   maxBarSize={28} radius={[6, 6, 0, 0]} />
-                                        <Bar dataKey="planned"   stackId="a" fill={STATUS_COLORS.planned} name="対応予定" maxBarSize={28} radius={[6, 6, 0, 0]}>
+                                        <defs>
+                                            {monthlyData.map((d, i) => {
+                                                const ratio = d.total ? d.completed / d.total : 0;
+                                                const lo = Math.max(0, ratio - 0.12);
+                                                const hi = Math.min(1, ratio + 0.12);
+                                                return (
+                                                    <linearGradient key={i} id={`monthlyGrad-${i}`} x1="0" y1="1" x2="0" y2="0">
+                                                        <stop offset={0}  stopColor={STATUS_COLORS.done} />
+                                                        <stop offset={lo} stopColor={STATUS_COLORS.done} />
+                                                        <stop offset={hi} stopColor={STATUS_COLORS.planned} />
+                                                        <stop offset={1}  stopColor={STATUS_COLORS.planned} />
+                                                    </linearGradient>
+                                                );
+                                            })}
+                                        </defs>
+                                        <Bar dataKey="total" name="件数" maxBarSize={28} radius={[6, 6, 0, 0]}>
+                                            {monthlyData.map((d, i) => (
+                                                <Cell
+                                                    key={i}
+                                                    fill={d.completed > 0 && d.planned > 0
+                                                        ? `url(#monthlyGrad-${i})`
+                                                        : (d.planned > 0 ? STATUS_COLORS.planned : STATUS_COLORS.done)}
+                                                />
+                                            ))}
                                             <LabelList
                                                 dataKey="total"
                                                 position="top"
