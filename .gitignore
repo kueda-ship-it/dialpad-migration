@@ -27,6 +27,9 @@ build_log.txt
 # Claude Code
 .claude/
 
+# 個人 Obsidian Vault (外部脳) のローカル clone — 絶対にコミットしない
+Obsidian Vault/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
