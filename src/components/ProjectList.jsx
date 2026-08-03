@@ -329,6 +329,14 @@ const ProjectRow = React.memo(({
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
+                        {project.hikari_collab && (
+                            <span style={{
+                                display: 'inline-flex', alignItems: 'center', flexShrink: 0,
+                                padding: '2px 6px', borderRadius: '5px', lineHeight: 1,
+                                fontSize: '9px', fontWeight: 800, letterSpacing: '0.06em',
+                                color: '#38bdf8', background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)',
+                            }}>光コラボ</span>
+                        )}
                         <button
                             onClick={e => { e.stopPropagation(); copyToClipboard(project.name, 'name-' + project.id); }}
                             title="物件名をコピー"
