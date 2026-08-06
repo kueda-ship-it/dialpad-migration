@@ -593,6 +593,8 @@ const ProjectList = () => {
     const isEditor = user?.dm_role === 'Editor';
     const canInlineEdit = !isViewOnly && !isEditor;
     const [statusFilter, setStatusFilter] = useState('すべて');
+    const [bulkClearChoice, setBulkClearChoice] = useState(false);
+    useEffect(() => { if (selectedIds.length === 0) setBulkClearChoice(false); }, [selectedIds]);
     const [masterFilter, setMasterFilter] = useState('すべて');
     const [lineSuspendedFilter, setLineSuspendedFilter] = useState('すべて');
     const [sortConfig, setSortConfig] = useState(() => {
@@ -1274,6 +1276,47 @@ const ProjectList = () => {
                                 {selectedIds.length}件選択中
                             </span>
                             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
+                            {bulkClearChoice ? (
+                                <>
+                                    <span style={{ fontSize: '12px', color: '#94a3b8', fontWeight: 700 }}>未対応に変更 — 対応日をどうしますか？</span>
+                                    {[
+                                        { label: '対応日も空白にする', clear: true,  rgb: '245,158,11', color: '#f59e0b' },
+                                        { label: '対応日は残す',       clear: false, rgb: '148,163,184', color: '#94a3b8' },
+                                    ].map(opt => (
+                                        <button key={opt.label} onClick={() => {
+                                            selectedIds.forEach(id => {
+                                                updateProjectStatus(id, '未対応');
+                                                if (opt.clear) updateProjectField(id, 'support_date', '');
+                                            });
+                                            setBulkClearChoice(false);
+                                            setSelectedIds([]);
+                                        }} style={{
+                                            padding: '7px 14px', borderRadius: '13px',
+                                            background: `rgba(${opt.rgb},0.13)`,
+                                            border: `1px solid rgba(${opt.rgb},0.35)`, color: opt.color,
+                                            fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                                            letterSpacing: '0.02em', transition: 'all 0.15s',
+                                        }}
+                                        onMouseOver={e => { e.currentTarget.style.background = `rgba(${opt.rgb},0.25)`; }}
+                                        onMouseOut={e => { e.currentTarget.style.background = `rgba(${opt.rgb},0.13)`; }}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                    <button onClick={() => setBulkClearChoice(false)} style={{
+                                        padding: '7px 14px', borderRadius: '13px',
+                                        background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.15)',
+                                        color: 'rgba(255,255,255,0.6)', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
+                                        transition: 'all 0.15s',
+                                    }}
+                                    onMouseOver={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}
+                                    onMouseOut={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                                    >
+                                        キャンセル
+                                    </button>
+                                </>
+                            ) : (
+                                <>
                             <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>ステータス一括変更：</span>
                             {['対応済', '対応予定', '未対応', 'リスケ'].map(status => {
                                 const colors = { '対応済': '#10b981', '対応予定': '#f59e0b', '未対応': '#94a3b8', 'リスケ': '#ef4444' };
@@ -1282,6 +1325,7 @@ const ProjectList = () => {
                                 const rgb = rgbs[status];
                                 return (
                                     <button key={status} onClick={() => {
+                                        if (status === '未対応') { setBulkClearChoice(true); return; }
                                         selectedIds.forEach(id => updateProjectStatus(id, status));
                                         setSelectedIds([]);
                                     }} style={{
@@ -1298,8 +1342,10 @@ const ProjectList = () => {
                                     </button>
                                 );
                             })}
+                                </>
+                            )}
                             <div style={{ width: '1px', height: '20px', background: 'rgba(255,255,255,0.1)' }} />
-                            <button onClick={() => setSelectedIds([])} style={{
+                            <button onClick={() => { setBulkClearChoice(false); setSelectedIds([]); }} style={{
                                 padding: '7px 14px', borderRadius: '13px',
                                 background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
                                 color: '#f87171', fontSize: '13px', fontWeight: 700, cursor: 'pointer',
