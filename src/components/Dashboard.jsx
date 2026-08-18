@@ -74,10 +74,12 @@ const Dashboard = () => {
     }), [projects, currentMonth]);
 
     const monthlyData = useMemo(() => {
+        const now = new Date();
+        const nowYm = now.getFullYear() * 100 + (now.getMonth() + 1);
         if (selectedYear !== 'all') {
             // 特定年: 12ヶ月表示
             const mStats = Array.from({ length: 12 }, (_, i) => ({
-                month: (i + 1) + "月", completed: 0, planned: 0, total: 0,
+                month: (i + 1) + "月", ym: selectedYear * 100 + (i + 1), completed: 0, planned: 0, total: 0,
             }));
             projects.forEach(p => {
                 if (!p.support_date) return;
@@ -88,7 +90,11 @@ const Dashboard = () => {
                 if (p.status === '対応済')           mStats[idx].completed++;
                 else if (p.status === '対応予定') mStats[idx].planned++;
             });
-            mStats.forEach(s => { s.total = s.completed + s.planned; });
+            mStats.forEach(s => {
+                s.total = s.completed + s.planned;
+                // 過去月に予定は存在しないため、折れ線では当月以降のみ描画する
+                s.plannedLine = s.ym < nowYm ? null : s.planned;
+            });
             return mStats;
         } else {
             // 全期間: 年月ごとに展開し全月表示
@@ -101,14 +107,14 @@ const Dashboard = () => {
                 if (isNaN(y)) return;
                 const key = y * 100 + m;
                 const label = y + "年" + m + "月";
-                if (!map.has(key)) map.set(key, { month: label, completed: 0, planned: 0, total: 0 });
+                if (!map.has(key)) map.set(key, { month: label, ym: key, completed: 0, planned: 0, total: 0 });
                 const entry = map.get(key);
                 if (p.status === '対応済')           entry.completed++;
                 else if (p.status === '対応予定') entry.planned++;
             });
             return Array.from(map.entries())
                 .sort((a, b) => a[0] - b[0])
-                .map(([, v]) => ({ ...v, total: v.completed + v.planned }));
+                .map(([, v]) => ({ ...v, total: v.completed + v.planned, plannedLine: v.ym < nowYm ? null : v.planned }));
         }
     }, [projects, selectedYear]);
 
@@ -253,13 +259,20 @@ const Dashboard = () => {
                                     </>
                                 ) : (
                                     <>
-                                        <Line type="monotone" dataKey="completed" stroke={STATUS_COLORS.done}    strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.done }}    name="完了" />
-                                        <Line type="monotone" dataKey="planned"   stroke={STATUS_COLORS.planned} strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.planned }} name="対応予定">
+                                        <Line type="monotone" dataKey="completed" stroke={STATUS_COLORS.done}    strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.done }}    name="完了">
                                             <LabelList
-                                                dataKey="total"
+                                                dataKey="completed"
                                                 position="top"
                                                 formatter={(v) => v ? `${v}件` : ''}
-                                                style={{ fill: 'rgba(255,255,255,0.85)', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em' }}
+                                                style={{ fill: '#34d399', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em' }}
+                                            />
+                                        </Line>
+                                        <Line type="monotone" dataKey="plannedLine" stroke={STATUS_COLORS.planned} strokeWidth={3} dot={{ r: 4, fill: '#030712', strokeWidth: 2, stroke: STATUS_COLORS.planned }} name="対応予定">
+                                            <LabelList
+                                                dataKey="plannedLine"
+                                                position="bottom"
+                                                formatter={(v) => v ? `${v}件` : ''}
+                                                style={{ fill: '#fbbf24', fontSize: 11, fontWeight: 800, letterSpacing: '0.02em' }}
                                             />
                                         </Line>
                                     </>
