@@ -124,6 +124,10 @@ const CalendarView = () => {
         if (!p.support_date) return false;
         const pd = new Date(p.support_date.replace(/-/g, '/'));
         return pd.getFullYear() === d.year && pd.getMonth() === d.month && pd.getDate() === d.day;
+    }).sort((a, b) => {
+        const nA = parseInt(a.id, 10), nB = parseInt(b.id, 10);
+        if (!isNaN(nA) && !isNaN(nB)) return nA - nB;
+        return String(a.id).localeCompare(String(b.id));
     });
 
     const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
