@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { ChevronLeft, ChevronRight, X, MapPin, Hash, CalendarDays, FileCheck, Settings2, ChevronDown } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, MapPin, Hash, CalendarDays, FileCheck, Settings2, ChevronDown, CheckCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 
 /* ─── ステータスカラー（システム共通） ──────────────────────────────────── */
@@ -314,11 +314,33 @@ const CalendarView = () => {
                             <div key={idx} className={`calendar-day ${!d.isCurrentMonth ? 'blank' : ''} ${isToday ? 'today' : ''}`}>
                                 <div className="flex justify-between items-start mb-2">
                                     <span className="day-number" style={{ color }}>{d.day}</span>
-                                    {dayProjects.length > 0 && (
-                                        <span style={{ fontSize: '9px', fontWeight: 900, color: 'rgba(59,130,246,0.7)', background: 'rgba(59,130,246,0.1)', borderRadius: '4px', padding: '1px 5px' }}>
-                                            {dayProjects.length}
-                                        </span>
-                                    )}
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                        {canUpdateStatus && d.isCurrentMonth && dayProjects.some(p => p.status !== '対応済') && (
+                                            <button
+                                                title="この日の案件をすべて対応済にする"
+                                                onClick={() => {
+                                                    const targets = dayProjects.filter(p => p.status !== '対応済');
+                                                    if (!window.confirm(`${d.month + 1}/${d.day} の ${targets.length}件をすべて対応済にしますか？`)) return;
+                                                    targets.forEach(p => updateProjectStatus(p.id, '対応済'));
+                                                }}
+                                                style={{
+                                                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                                                    width: '18px', height: '18px', borderRadius: '4px', cursor: 'pointer',
+                                                    background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)',
+                                                    color: '#10b981', padding: 0, transition: 'all 0.15s',
+                                                }}
+                                                onMouseOver={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.28)'; }}
+                                                onMouseOut={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.12)'; }}
+                                            >
+                                                <CheckCheck size={12} />
+                                            </button>
+                                        )}
+                                        {dayProjects.length > 0 && (
+                                            <span style={{ fontSize: '9px', fontWeight: 900, color: 'rgba(59,130,246,0.7)', background: 'rgba(59,130,246,0.1)', borderRadius: '4px', padding: '1px 5px' }}>
+                                                {dayProjects.length}
+                                            </span>
+                                        )}
+                                    </span>
                                 </div>
                                 <div className="day-events">
                                     {dayProjects.map(p => {
