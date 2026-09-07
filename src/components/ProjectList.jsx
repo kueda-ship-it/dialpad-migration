@@ -597,6 +597,7 @@ const ProjectList = () => {
     useEffect(() => { if (selectedIds.length === 0) setBulkClearChoice(false); }, [selectedIds]);
     const [masterFilter, setMasterFilter] = useState('すべて');
     const [lineSuspendedFilter, setLineSuspendedFilter] = useState('すべて');
+    const [hikariFilter, setHikariFilter] = useState('すべて');
     const [sortConfig, setSortConfig] = useState(() => {
         try { const s = localStorage.getItem('dm_sort_config'); return s ? JSON.parse(s) : { key: 'id', direction: 'asc' }; } catch { return { key: 'id', direction: 'asc' }; }
     });
@@ -730,8 +731,9 @@ const ProjectList = () => {
             }
             return !p.line_suspended_date;
         })();
-        return matchSearch && matchStatus && matchMaster && matchLineSuspended;
-    }), [sortedProjects, searchTerm, statusFilter, masterFilter, lineSuspendedFilter]);
+        const matchHikari = hikariFilter === 'すべて' || (hikariFilter === '光コラボのみ' ? !!p.hikari_collab : !p.hikari_collab);
+        return matchSearch && matchStatus && matchMaster && matchLineSuspended && matchHikari;
+    }), [sortedProjects, searchTerm, statusFilter, masterFilter, lineSuspendedFilter, hikariFilter]);
 
     /* ─── License stats ── */
     const masterDoneCount = useMemo(() => projects.filter(p => p.master_update_done).length, [projects]);
@@ -1045,6 +1047,7 @@ const ProjectList = () => {
                         <GlassDropdown labelPrefix="STATUS: " value={statusFilter} onChange={setStatusFilter} options={['すべて', '対応済以外', '未対応', '対応予定', '対応済', 'リスケ']} />
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
                         <GlassDropdown labelPrefix="LINE: " value={lineSuspendedFilter} onChange={setLineSuspendedFilter} options={['すべて', '未休止', '休止済', '1ヶ月超過']} />
+                        <GlassDropdown labelPrefix="光コラボ: " value={hikariFilter} onChange={setHikariFilter} options={['すべて', '光コラボのみ', '光コラボ以外']} />
 
                         {/* ライセンス数設定（Admin/Manager のみ） */}
                         {!isViewOnly && (
