@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { canEditProjects } from '../utils/roles';
 import { ChevronLeft, ChevronRight, X, MapPin, Hash, CalendarDays, FileCheck, Settings2, ChevronDown, CheckCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 
@@ -92,7 +93,7 @@ const GlassDropdown = ({ value, onChange, options, labelPrefix = '', disabled = 
 
 const CalendarView = () => {
     const { projects, updateProjectStatus, user } = useApp();
-    const canUpdateStatus = user?.dm_role === 'Admin' || user?.dm_role === 'Manager' || user?.dm_role === 'Editor';
+    const canUpdateStatus = canEditProjects(user?.dm_role);
     const [currentDate, setCurrentDate]     = useState(new Date());
     const [selectedProject, setSelectedProject] = useState(null);
 

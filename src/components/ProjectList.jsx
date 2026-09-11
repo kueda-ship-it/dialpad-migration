@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
+import { canEditProjects, hasRole } from '../utils/roles';
 import { AnimatePresence, motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import {
     Search, Calendar, FileCheck,
@@ -589,8 +590,8 @@ const ProjectList = () => {
         originalUpdateProjectStatus(id, status);
     }, [originalUpdateProjectStatus, projects]);
 
-    const isViewOnly = user?.dm_role === 'View';
-    const isEditor = user?.dm_role === 'Editor';
+    const isViewOnly = !canEditProjects(user?.dm_role);
+    const isEditor = hasRole(user?.dm_role, 'Editor');
     const canInlineEdit = !isViewOnly && !isEditor;
     const [statusFilter, setStatusFilter] = useState('すべて');
     const [bulkClearChoice, setBulkClearChoice] = useState(false);

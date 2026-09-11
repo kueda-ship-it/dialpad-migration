@@ -23,10 +23,6 @@ export const AppProvider = ({ children }) => {
             return;
         }
 
-        const isUeda = sessionUser.user_metadata?.full_name?.includes('上田') || 
-                        sessionUser.email?.includes('ueda') || 
-                        sessionUser.email === 'k_ueda@fts.co.jp';
-        
         // 1. キャッシュから即時取得
         let cachedData = { avatar: null, name: null, role: null };
         try {
@@ -38,7 +34,8 @@ export const AppProvider = ({ children }) => {
             ...sessionUser,
             full_name: cachedData.name || sessionUser.user_metadata?.full_name || sessionUser.email?.split('@')[0] || 'Unknown User',
             avatar_url: cachedData.avatar || sessionUser.user_metadata?.avatar_url || sessionUser.user_metadata?.picture || null,
-            dm_role: cachedData.role || (isUeda ? 'Admin' : (sessionUser.user_metadata?.dm_role || 'Manager'))
+            // 権限は profiles.dm_role のみを根拠にする（user_metadata は本人が書き換え可能なため使わない）
+            dm_role: cachedData.role || null
         };
 
         setUser(initialUser);
@@ -62,7 +59,7 @@ export const AppProvider = ({ children }) => {
                         // DBの値を優先的に適用
                         const next = { ...prev };
                         if (data.avatar_url) next.avatar_url = data.avatar_url;
-                        if (data.dm_role)   next.dm_role = data.dm_role;
+                        next.dm_role = data.dm_role ?? null;
                         if (data.display_name) next.full_name = data.display_name;
                         return next;
                     });

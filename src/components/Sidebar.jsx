@@ -1,11 +1,12 @@
 import React from 'react';
 import { LayoutDashboard, ListTodo, MapPin, Calendar, Navigation, Settings as SettingsIcon } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { canEditProjects } from '../utils/roles';
 
 const Sidebar = ({ activeTab, setActiveTab }) => {
     const { projects, user, licenseCount, setLicenseCount, licenseRemaining } = useApp();
     const uncheckedCount = projects.filter(p => !p.master_update_done && p.status === '対応予定').length;
-    const isAdminManagerOrEditor = ['Admin', 'Manager', 'Editor'].includes(user?.dm_role);
+    const isAdminManagerOrEditor = canEditProjects(user?.dm_role);
 
     const menuItems = [
         { id: 'dashboard', icon: LayoutDashboard, label: 'Dashboard' },

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { isAdminRole } from '../utils/roles';
 import { supabase } from '../lib/supabase';
 import {
     Settings as SettingsIcon, Bell, Mail, Send, LogOut,
@@ -83,7 +84,7 @@ const Settings = () => {
     const [_editingUserId, _setEditingUserId] = useState(null);
     const [_avatarInput, _setAvatarInput] = useState('');
 
-    const isAdmin = user?.dm_role === 'Admin';
+    const isAdmin = isAdminRole(user?.dm_role);
 
     // Fetch current user's profile from Supabase profiles table on mount
     useEffect(() => {
