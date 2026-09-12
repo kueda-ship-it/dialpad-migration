@@ -22,12 +22,8 @@ BEGIN
     COALESCE(new.raw_user_meta_data->>'full_name', split_part(new.email, '@', 1)),
     new.raw_user_meta_data->>'avatar_url',
     new.email,
-    CASE 
-      WHEN new.email LIKE '%ueda%' OR new.email = 'k_ueda@fts.co.jp' THEN 'Admin'
-      WHEN new.email LIKE '%admin%' THEN 'Admin'
-      WHEN new.email LIKE '%manager%' THEN 'Manager'
-      ELSE 'View'
-    END,
+    -- 権限は名前・メールから推定しない。Admin 等は profiles.dm_role を明示的に更新して付与する
+    'View',
     now()
   )
   ON CONFLICT (id) DO UPDATE SET
