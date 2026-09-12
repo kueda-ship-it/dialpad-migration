@@ -1,3 +1,10 @@
+-- ############################################################
+-- ⛔ 実行禁止（アーカイブ・2026-09-12）
+-- 本番 profiles に full_name 列は存在しない（display_name）。このファイルは handle_new_user を
+-- full_name へ INSERT する版で置き換えるため、実行すると全アプリで新規ユーザー登録が 500 になる。
+-- 現行の定義は本番 DB を正とすること。
+-- ############################################################
+
 -- Create a profiles table for user roles and information
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users NOT NULL PRIMARY KEY,
