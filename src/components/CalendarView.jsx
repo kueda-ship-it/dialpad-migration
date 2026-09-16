@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import { canEditProjects } from '../utils/roles';
-import { ChevronLeft, ChevronRight, X, MapPin, Hash, CalendarDays, FileCheck, Settings2, ChevronDown, CheckCheck } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, MapPin, Hash, CalendarDays, FileCheck, Settings2, ChevronDown, CheckCheck, MapPinOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion'; // eslint-disable-line no-unused-vars
 
 /* ─── ステータスカラー（システム共通） ──────────────────────────────────── */
@@ -472,6 +472,19 @@ const CalendarView = () => {
                                     <FileCheck size={15} style={{ color: sp.master_update_done ? '#10b981' : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
                                     <span style={{ fontSize: '12px', fontWeight: 700, color: sp.master_update_done ? '#10b981' : 'rgba(255,255,255,0.3)' }}>
                                         マスタ更新: {sp.master_update_done ? '完了済み' : '未完了'}
+                                    </span>
+                                </div>
+
+                                {/* 現地対応 */}
+                                <div style={{
+                                    padding: '12px 16px', borderRadius: '12px',
+                                    background: sp.no_onsite ? 'rgba(245,158,11,0.08)' : 'rgba(255,255,255,0.02)',
+                                    border: '1px solid ' + (sp.no_onsite ? 'rgba(245,158,11,0.25)' : 'rgba(255,255,255,0.06)'),
+                                    display: 'flex', alignItems: 'center', gap: '10px',
+                                }}>
+                                    <MapPinOff size={15} style={{ color: sp.no_onsite ? '#f59e0b' : 'rgba(255,255,255,0.2)', flexShrink: 0 }} />
+                                    <span style={{ fontSize: '12px', fontWeight: 700, color: sp.no_onsite ? '#f59e0b' : 'rgba(255,255,255,0.3)' }}>
+                                        現地対応: {sp.no_onsite ? 'なしでOK' : 'あり'}
                                     </span>
                                 </div>
 

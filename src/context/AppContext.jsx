@@ -442,6 +442,7 @@ export const AppProvider = ({ children }) => {
             support_date: newProj.support_date ? newProj.support_date.replace(/\//g, '-') : null,
             line_suspended_date: newProj.line_suspended_date ? newProj.line_suspended_date.replace(/\//g, '-') : null,
             master_update_done: newProj.master_update_done || false,
+            no_onsite: newProj.no_onsite || false,
         }]);
     };
 
@@ -509,6 +510,7 @@ export const AppProvider = ({ children }) => {
             support_date: updatedProject.support_date ? updatedProject.support_date.replace(/\//g, '-') : null,
             line_suspended_date: updatedProject.line_suspended_date ? updatedProject.line_suspended_date.replace(/\//g, '-') : null,
             master_update_done: updatedProject.master_update_done || false,
+            no_onsite: !!updatedProject.no_onsite,
         };
 
         if (targetId) {
@@ -533,6 +535,31 @@ export const AppProvider = ({ children }) => {
         } else {
             const { error } = await supabase.from('projects').update({ master_update_done: newValue }).eq('unit_id', id);
             if (error) console.error('Error updating master status:', error);
+        }
+    };
+
+    const toggleNoOnsite = async (id) => {
+        const project = projects.find(p => p.id === id);
+        if (!project) return;
+        const newValue = !project.no_onsite;
+
+        setProjects(prev => prev.map(p => p.id === id ? { ...p, no_onsite: newValue } : p));
+
+        const targetId = project?.uuid || null;
+        const query = targetId
+            ? supabase.from('projects').update({ no_onsite: newValue }).eq('id', targetId)
+            : supabase.from('projects').update({ no_onsite: newValue }).eq('unit_id', id);
+
+        try {
+            const { error } = await Promise.race([
+                query,
+                new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000)),
+            ]);
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error updating no_onsite:', err);
+            setProjects(prev => prev.map(p => p.id === id ? { ...p, no_onsite: !newValue } : p));
+            alert('現地対応なしの更新に失敗しました。通信状況を確認して再度お試しください。');
         }
     };
 
@@ -593,6 +620,7 @@ export const AppProvider = ({ children }) => {
             updateProjectField,
             updateProject,
             toggleMasterUpdate,
+            toggleNoOnsite,
             addProject,
             deleteProject,
             notifications,

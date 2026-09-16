@@ -7,7 +7,7 @@ import {
     Search, Calendar, FileCheck,
     Check, Plus, X, ArrowUpDown, ArrowUp, ArrowDown, Edit, Info, ChevronDown, Trash2,
     MapPin, Hash, Cpu, CalendarDays, ShieldCheck, Settings2,
-    Copy, Download, Upload, Minus, ChevronLeft, ChevronRight, PhoneOff
+    Copy, Download, Upload, Minus, ChevronLeft, ChevronRight, PhoneOff, MapPinOff
 } from 'lucide-react';
 
 /* ─── ステータスカラー定義（システム共通） ──────────────────────────────── */
@@ -275,7 +275,7 @@ const InlineDatePicker = ({ project, canInlineEdit, onDateChange, field = 'suppo
 const ProjectRow = React.memo(({
     project, isSelected, toggleSelection,
     updateProjectStatus, handleSupportDateChange, handleLineSuspendedDateChange, toggleMasterUpdate,
-    openEditModal, openDetailModal,
+    toggleNoOnsite, openEditModal, openDetailModal,
     copyToClipboard, copiedId, isViewOnly, canInlineEdit
 }) => {
     const rowClass =
@@ -297,6 +297,12 @@ const ProjectRow = React.memo(({
         e.stopPropagation();
         if (isViewOnly) return;
         toggleMasterUpdate(project.id);
+    };
+
+    const handleNoOnsiteClick = (e) => {
+        e.stopPropagation();
+        if (isViewOnly) return;
+        toggleNoOnsite(project.id);
     };
 
     const formatMaintenanceMonth = (month) => {
@@ -397,6 +403,33 @@ const ProjectRow = React.memo(({
                         canInlineEdit={canInlineEdit}
                         onDateChange={handleSupportDateChange}
                     />
+                </div>
+            </td>
+            <td className="px-4 py-0.5 align-middle">
+                <div className="flex justify-center">
+                    <button
+                        onClick={handleNoOnsiteClick}
+                        title={project.no_onsite ? '現地対応なし（遠隔のみでOK）' : '現地対応あり'}
+                        className={`btn-square-v9 flex items-center justify-center transition-all ${project.no_onsite
+                            ? 'border-[#f59e0b]/80 bg-[#f59e0b]/05 text-[#f59e0b] scale-105'
+                            : 'bg-white/5 text-white/20 border-white/5 hover:bg-white/10 hover:text-white/40'}`}
+                        style={{
+                            width: '38px', height: '38px', borderRadius: '10px',
+                            filter: project.no_onsite ? 'drop-shadow(0 0 5px rgba(245, 158, 11, 0.6))' : 'none',
+                            boxShadow: project.no_onsite ? 'inset 0 0 10px rgba(245, 158, 11, 0.3)' : 'none'
+                        }}
+                        disabled={isViewOnly}
+                    >
+                        <MapPinOff
+                            size={17}
+                            style={{
+                                color: project.no_onsite ? '#fbbf24' : undefined,
+                                filter: project.no_onsite
+                                    ? 'drop-shadow(0 0 2px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.4))'
+                                    : 'none'
+                            }}
+                        />
+                    </button>
                 </div>
             </td>
             <td className="px-4 py-0.5 align-middle">
@@ -563,7 +596,7 @@ const ProjectList = () => {
     const {
         projects, setProjects,
         updateProjectStatus: originalUpdateProjectStatus,
-        updateProjectField, toggleMasterUpdate,
+        updateProjectField, toggleMasterUpdate, toggleNoOnsite,
         selectedIds, setSelectedIds, toggleSelection,
         licenseCount, licenseRemaining, setLicenseCount,
         user,
@@ -599,6 +632,7 @@ const ProjectList = () => {
     const [masterFilter, setMasterFilter] = useState('すべて');
     const [lineSuspendedFilter, setLineSuspendedFilter] = useState('すべて');
     const [hikariFilter, setHikariFilter] = useState('すべて');
+    const [onsiteFilter, setOnsiteFilter] = useState('すべて');
     const [sortConfig, setSortConfig] = useState(() => {
         try { const s = localStorage.getItem('dm_sort_config'); return s ? JSON.parse(s) : { key: 'id', direction: 'asc' }; } catch { return { key: 'id', direction: 'asc' }; }
     });
@@ -654,12 +688,13 @@ const ProjectList = () => {
         status: '未対応',
         support_date: '',
         line_suspended_date: '',
-        master_update_done: false
+        master_update_done: false,
+        no_onsite: false
     });
     const [detailProject, setDetailProject] = useState(null);
 
     /* ─── New project form ── */
-    const emptyNew = { unit_id: '', name: '', phone: '', locker_type: '', maintenance_month: '', status: '未対応', support_date: '', line_suspended_date: '', master_update_done: false };
+    const emptyNew = { unit_id: '', name: '', phone: '', locker_type: '', maintenance_month: '', status: '未対応', support_date: '', line_suspended_date: '', master_update_done: false, no_onsite: false };
     const [newProject, setNewProject] = useState(emptyNew);
 
     /* ─── Sort ── */
@@ -689,7 +724,7 @@ const ProjectList = () => {
                 const dB = b.line_suspended_date ? new Date(b.line_suspended_date.replace(/-/g, '/')) : new Date(0);
                 return sortConfig.direction === 'asc' ? dA - dB : dB - dA;
             }
-            if (sortConfig.key === 'master_update_done') {
+            if (sortConfig.key === 'master_update_done' || sortConfig.key === 'no_onsite') {
                 return sortConfig.direction === 'asc'
                     ? (a[sortConfig.key] ? 1 : 0) - (b[sortConfig.key] ? 1 : 0)
                     : (b[sortConfig.key] ? 1 : 0) - (a[sortConfig.key] ? 1 : 0);
@@ -733,8 +768,9 @@ const ProjectList = () => {
             return !p.line_suspended_date;
         })();
         const matchHikari = hikariFilter === 'すべて' || (hikariFilter === '光コラボのみ' ? !!p.hikari_collab : !p.hikari_collab);
-        return matchSearch && matchStatus && matchMaster && matchLineSuspended && matchHikari;
-    }), [sortedProjects, searchTerm, statusFilter, masterFilter, lineSuspendedFilter, hikariFilter]);
+        const matchOnsite = onsiteFilter === 'すべて' || (onsiteFilter === '現地なしのみ' ? !!p.no_onsite : !p.no_onsite);
+        return matchSearch && matchStatus && matchMaster && matchLineSuspended && matchHikari && matchOnsite;
+    }), [sortedProjects, searchTerm, statusFilter, masterFilter, lineSuspendedFilter, hikariFilter, onsiteFilter]);
 
     /* ─── License stats ── */
     const masterDoneCount = useMemo(() => projects.filter(p => p.master_update_done).length, [projects]);
@@ -752,18 +788,19 @@ const ProjectList = () => {
     }, [filteredProjects, currentPage, isShowingAll]);
 
     // フィルター変更時はページ1に戻す
-    React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, masterFilter, lineSuspendedFilter]);
+    React.useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, masterFilter, lineSuspendedFilter, hikariFilter, onsiteFilter]);
 
     /* ─── CSV Export ── */
     const exportCSV = () => {
         const BOM = '﻿';
-        const headers = ['号機ID', '物件名', '住所', '電話番号', 'ステータス', 'メンテ月', '対応日', 'マスタ更新', 'ロッカータイプ', '備考', '電話休止日'];
+        const headers = ['号機ID', '物件名', '住所', '電話番号', 'ステータス', 'メンテ月', '対応日', 'マスタ更新', 'ロッカータイプ', '備考', '電話休止日', '現地対応'];
         const rows = filteredProjects.map(p => [
             p.id, p.name, p.address || '', p.phone || '',
             p.status || '', p.maintenance_month || '', p.support_date || '',
             p.master_update_done ? '完了' : '未完了',
             p.locker_type || '', p.notes || '',
             p.line_suspended_date || '',
+            p.no_onsite ? '現地なし' : '現地あり',
         ]);
         const csv = BOM + [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -824,6 +861,7 @@ const ProjectList = () => {
             locker_type: cols[8] || '',
             notes: cols[9] || '',
             line_suspended_date: cols[10] || '',
+            no_onsite: cols[11] === '現地なし' || cols[11] === 'true',
             isDuplicate: !!existing,
             existing,
             action: existing ? 'skip' : 'add',
@@ -879,6 +917,7 @@ const ProjectList = () => {
                     master_update_done: r.master_update_done,
                     locker_type: r.locker_type,
                     notes: r.notes,
+                    no_onsite: r.no_onsite,
                 };
                 if (r.action === 'overwrite' && r.existing) {
                     await updateProject({
@@ -952,7 +991,8 @@ const ProjectList = () => {
             status: project.status || '未対応',
             support_date: project.support_date || '',
             line_suspended_date: project.line_suspended_date || '',
-            master_update_done: !!project.master_update_done
+            master_update_done: !!project.master_update_done,
+            no_onsite: !!project.no_onsite
         });
         setIsEditModalOpen(true);
     };
@@ -1049,6 +1089,7 @@ const ProjectList = () => {
                         <GlassDropdown labelPrefix="MASTER: " value={masterFilter} onChange={setMasterFilter} options={['すべて', '未完了', '完了済み']} />
                         <GlassDropdown labelPrefix="LINE: " value={lineSuspendedFilter} onChange={setLineSuspendedFilter} options={['すべて', '未休止', '休止済', '1ヶ月超過']} />
                         <GlassDropdown labelPrefix="光コラボ: " value={hikariFilter} onChange={setHikariFilter} options={['すべて', '光コラボのみ', '光コラボ以外']} />
+                        <GlassDropdown labelPrefix="現地対応: " value={onsiteFilter} onChange={setOnsiteFilter} options={['すべて', '現地なしのみ', '現地ありのみ']} />
 
                         {/* ライセンス数設定（Admin/Manager のみ） */}
                         {!isViewOnly && (
@@ -1214,6 +1255,9 @@ const ProjectList = () => {
                                         <th className="px-4 py-6 w-[160px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('support_date')}>
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
+                                        <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('no_onsite')}>
+                                            現地対応 <SortIcon columnKey="no_onsite" sortConfig={sortConfig} />
+                                        </th>
                                         <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }}>
                                             マスタ更新
                                         </th>
@@ -1234,6 +1278,7 @@ const ProjectList = () => {
                                             handleSupportDateChange={handleSupportDateChange}
                                             handleLineSuspendedDateChange={handleLineSuspendedDateChange}
                                             toggleMasterUpdate={toggleMasterUpdate}
+                                            toggleNoOnsite={toggleNoOnsite}
                                             openEditModal={openEditModal}
                                             openDetailModal={openDetailModal}
                                             copyToClipboard={copyToClipboard}
@@ -1542,6 +1587,19 @@ const ProjectList = () => {
                                                 </span>
                                             </div>
                                         </Field>
+                                        <Field label="現地対応">
+                                            <div style={{ display: 'flex', alignItems: 'center', height: '45px', gap: '13px' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    className="checkbox-v5"
+                                                    checked={!!newProject.no_onsite}
+                                                    onChange={e => setNewProject({ ...newProject, no_onsite: e.target.checked })}
+                                                />
+                                                <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontFamily: 'Outfit, sans-serif' }}>
+                                                    {newProject.no_onsite ? '現地なしでOK' : '現地対応あり'}
+                                                </span>
+                                            </div>
+                                        </Field>
                                         <Field label="電話休止日">
                                             <input
                                                 type="date"
@@ -1697,6 +1755,19 @@ const ProjectList = () => {
                                                     value={safeLineSuspendedDate}
                                                     onChange={e => setEditingProject({ ...ep, line_suspended_date: e.target.value.replace(/-/g, '/') })}
                                                 />
+                                            </Field>
+                                            <Field label="現地対応">
+                                                <div style={{ display: 'flex', alignItems: 'center', height: '45px', gap: '13px' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        className="checkbox-v5"
+                                                        checked={!!ep.no_onsite}
+                                                        onChange={e => setEditingProject({ ...ep, no_onsite: e.target.checked })}
+                                                    />
+                                                    <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.7)', fontWeight: 500, fontFamily: 'Outfit, sans-serif' }}>
+                                                        {ep.no_onsite ? '現地なしでOK' : '現地対応あり'}
+                                                    </span>
+                                                </div>
                                             </Field>
                                         </div>
 
@@ -1856,6 +1927,29 @@ const ProjectList = () => {
                                         />
                                         <span style={{ fontSize: '13px', fontWeight: 700, color: dp.master_update_done ? '#a855f7' : 'rgba(255,255,255,0.3)' }}>
                                             マスタ更新: {dp.master_update_done ? 'OK (COMPLETED)' : '未完了'}
+                                        </span>
+                                    </div>
+
+                                    <div style={{
+                                        padding: '12px 16px', borderRadius: '13px',
+                                        background: dp.no_onsite ? 'rgba(245, 158, 11, 0.08)' : 'rgba(255,255,255,0.02)',
+                                        border: '1px solid ' + (dp.no_onsite ? 'rgba(245, 158, 11, 0.8)' : 'rgba(255,255,255,0.06)'),
+                                        display: 'flex', alignItems: 'center', gap: '10px',
+                                        filter: dp.no_onsite ? 'drop-shadow(0 0 4px rgba(245, 158, 11, 0.5))' : 'none',
+                                        boxShadow: dp.no_onsite ? 'inset 0 0 8px rgba(245, 158, 11, 0.2)' : 'none'
+                                    }}>
+                                        <MapPinOff
+                                            size={15}
+                                            style={{
+                                                color: dp.no_onsite ? '#fbbf24' : 'rgba(255,255,255,0.2)',
+                                                flexShrink: 0,
+                                                filter: dp.no_onsite
+                                                    ? 'drop-shadow(0 0 2px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 6px rgba(245, 158, 11, 0.4))'
+                                                    : 'none'
+                                            }}
+                                        />
+                                        <span style={{ fontSize: '13px', fontWeight: 700, color: dp.no_onsite ? '#f59e0b' : 'rgba(255,255,255,0.3)' }}>
+                                            現地対応: {dp.no_onsite ? 'なしでOK' : 'あり'}
                                         </span>
                                     </div>
 
