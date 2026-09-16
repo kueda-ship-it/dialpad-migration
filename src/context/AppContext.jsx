@@ -527,8 +527,13 @@ export const AppProvider = ({ children }) => {
         const ok = window.confirm('現地対応なし＋マスタ更新済みです。\nステータスを「対応済」にして完了にしますか？');
         if (!ok) return;
         await updateProjectStatus(project.id, '対応済');
-        if (!project.support_date) {
-            const d = new Date();
+
+        // 遠隔完了の対応日は「完了した日」。未設定 or 未来の予定日なら当日に置き換える
+        // （未来日付＋対応済は formatProject が「対応予定」に正規化するため、そのままだと完了に見えない）
+        const d = new Date();
+        d.setHours(0, 0, 0, 0);
+        const planned = project.support_date ? new Date(String(project.support_date).replace(/-/g, '/')) : null;
+        if (!planned || planned > d) {
             const today = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
             await updateProjectField(project.id, 'support_date', today);
         }
