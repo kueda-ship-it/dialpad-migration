@@ -336,6 +336,14 @@ const ProjectRow = React.memo(({
                 <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', paddingTop: '6px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ fontSize: '13px', fontWeight: 800, color: '#fff', letterSpacing: '0.02em' }}>{project.name}</div>
+                        {project.no_onsite && (
+                            <span style={{
+                                display: 'inline-flex', alignItems: 'center', flexShrink: 0,
+                                padding: '2px 6px', borderRadius: '5px', lineHeight: 1,
+                                fontSize: '9px', fontWeight: 800, letterSpacing: '0.06em',
+                                color: '#fbbf24', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)',
+                            }}>遠隔</span>
+                        )}
                         {project.hikari_collab && (
                             <span style={{
                                 display: 'inline-flex', alignItems: 'center', flexShrink: 0,
@@ -405,8 +413,8 @@ const ProjectRow = React.memo(({
                     />
                 </div>
             </td>
-            <td className="px-4 py-0.5 align-middle">
-                <div className="flex justify-center">
+            <td className="px-4 py-0.5 text-center align-middle">
+                <div className="flex items-center justify-center">
                     <button
                         onClick={handleNoOnsiteClick}
                         title={project.no_onsite ? '現地対応なし（遠隔のみでOK）' : '現地対応あり'}
@@ -432,8 +440,8 @@ const ProjectRow = React.memo(({
                     </button>
                 </div>
             </td>
-            <td className="px-4 py-0.5 align-middle">
-                <div className="flex justify-center">
+            <td className="px-4 py-0.5 text-center align-middle">
+                <div className="flex items-center justify-center">
                     <button
                         onClick={handleMasterClick}
                         className={`btn-square-v9 flex items-center justify-center transition-all ${project.master_update_done
@@ -1256,7 +1264,7 @@ const ProjectList = () => {
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
                                         <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('no_onsite')}>
-                                            現地対応 <SortIcon columnKey="no_onsite" sortConfig={sortConfig} />
+                                            <div className="flex items-center justify-center gap-2">現地対応 <SortIcon columnKey="no_onsite" sortConfig={sortConfig} /></div>
                                         </th>
                                         <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }}>
                                             マスタ更新

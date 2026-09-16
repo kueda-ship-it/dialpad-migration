@@ -520,6 +520,20 @@ export const AppProvider = ({ children }) => {
         }
     };
 
+    /* 現地対応なし かつ マスタ更新済 → 現地に行かずに完了なので「対応済」に確定する */
+    const confirmRemoteCompletion = async (project, { no_onsite, master_update_done }) => {
+        if (!no_onsite || !master_update_done) return;
+        if (project.status === '対応済') return;
+        const ok = window.confirm('現地対応なし＋マスタ更新済みです。\nステータスを「対応済」にして完了にしますか？');
+        if (!ok) return;
+        await updateProjectStatus(project.id, '対応済');
+        if (!project.support_date) {
+            const d = new Date();
+            const today = `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+            await updateProjectField(project.id, 'support_date', today);
+        }
+    };
+
     const toggleMasterUpdate = async (id) => {
         const project = projects.find(p => p.id === id);
         if (!project) return;
@@ -536,6 +550,8 @@ export const AppProvider = ({ children }) => {
             const { error } = await supabase.from('projects').update({ master_update_done: newValue }).eq('unit_id', id);
             if (error) console.error('Error updating master status:', error);
         }
+
+        await confirmRemoteCompletion(project, { no_onsite: project.no_onsite, master_update_done: newValue });
     };
 
     const toggleNoOnsite = async (id) => {
@@ -556,6 +572,7 @@ export const AppProvider = ({ children }) => {
                 new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 15000)),
             ]);
             if (error) throw error;
+            await confirmRemoteCompletion(project, { no_onsite: newValue, master_update_done: project.master_update_done });
         } catch (err) {
             console.error('Error updating no_onsite:', err);
             setProjects(prev => prev.map(p => p.id === id ? { ...p, no_onsite: !newValue } : p));
