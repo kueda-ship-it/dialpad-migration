@@ -1264,7 +1264,14 @@ const ProjectList = () => {
                                             対応日 <SortIcon columnKey="support_date" sortConfig={sortConfig} />
                                         </th>
                                         <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] cursor-pointer th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }} onClick={() => handleSort('no_onsite')}>
-                                            <div className="flex items-center justify-center gap-2">現地対応 <SortIcon columnKey="no_onsite" sortConfig={sortConfig} /></div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1.4 }}>
+                                                <span style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+                                                    現地対応
+                                                    <span style={{ position: 'absolute', left: '100%', marginLeft: '4px', display: 'inline-flex', alignItems: 'center' }}>
+                                                        <SortIcon columnKey="no_onsite" sortConfig={sortConfig} />
+                                                    </span>
+                                                </span>
+                                            </div>
                                         </th>
                                         <th className="px-4 py-6 w-[100px] border-b border-white/[0.08] th-label-rich text-center align-middle" style={{ verticalAlign: 'middle', fontSize: '13px' }}>
                                             マスタ更新
